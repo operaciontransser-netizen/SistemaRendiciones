@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Reportes</title>
+
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    rel="stylesheet"
+  />
+
+  <link rel="stylesheet" href="../assets/css/style.css" />
+</head>
+
+<body>
+  <div class="d-flex">
+
+    <!-- MENÚ LATERAL -->
+    <nav class="sidebar">
+      <h3 class="logo">
+        <i class="bi bi-receipt"></i>
+        Rendiciones
+      </h3>
+
+      <ul>
+        <li onclick="location.href='../index.html'">
+          <i class="bi bi-speedometer2"></i>
+          Dashboard
+        </li>
+
+        <li onclick="location.href='rendiciones.html'">
+          <i class="bi bi-wallet2"></i>
+          Rendiciones
+        </li>
+
+        <li onclick="location.href='colaboradores.html'">
+          <i class="bi bi-people"></i>
+          Colaboradores
+        </li>
+
+        <li>
+          <i class="bi bi-file-earmark"></i>
+          Documentos
+        </li>
+
+        <li class="active">
+          <i class="bi bi-graph-up"></i>
+          Reportes
+        </li>
+
+        <li>
+          <i class="bi bi-gear"></i>
+          Configuración
+        </li>
+      </ul>
+    </nav>
+
+    <!-- CONTENIDO -->
+    <main class="contenido">
+
+      <!-- ENCABEZADO -->
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h2>Reportes</h2>
+          <p class="text-muted mb-0">
+            Análisis financiero y seguimiento de rendiciones
+          </p>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+          <button type="button" class="btn btn-outline-primary">
+            <i class="bi bi-person-circle"></i>
+            <span id="nombreUsuario">Usuario</span>
+          </button>
+
+          <button
+            type="button"
+            class="btn btn-outline-danger"
+            id="btnCerrarSesion"
+          >
+            <i class="bi bi-box-arrow-right"></i>
+            Cerrar sesión
+          </button>
+        </div>
+      </div>
+
+      <!-- FILTROS -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <strong>
+            <i class="bi bi-funnel me-1"></i>
+            Filtros del reporte
+          </strong>
+        </div>
+
+        <div class="card-body">
+          <div class="row g-3 align-items-end">
+            <div class="col-md-2">
+              <label for="filtroFechaDesde" class="form-label">Desde</label>
+              <input type="date" id="filtroFechaDesde" class="form-control" />
+            </div>
+
+            <div class="col-md-2">
+              <label for="filtroFechaHasta" class="form-label">Hasta</label>
+              <input type="date" id="filtroFechaHasta" class="form-control" />
+            </div>
+
+            <div class="col-md-3">
+              <label for="filtroColaborador" class="form-label">
+                Colaborador
+              </label>
+              <select id="filtroColaborador" class="form-select">
+                <option value="">Todos los colaboradores</option>
+              </select>
+            </div>
+
+            <div class="col-md-2">
+              <label for="filtroEstado" class="form-label">Estado</label>
+              <select id="filtroEstado" class="form-select">
+                <option value="">Todos</option>
+                <option value="PENDIENTE">Pendiente</option>
+                <option value="AUTORIZADA">Autorizada</option>
+              </select>
+            </div>
+
+            <div class="col-md-3 d-flex gap-2">
+              <button type="button" id="btnAplicarFiltros" class="btn btn-primary flex-fill">
+                <i class="bi bi-search"></i>
+                Aplicar
+              </button>
+
+              <button type="button" id="btnLimpiarFiltros" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-counterclockwise"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RESUMEN EJECUTIVO -->
+      <div class="row g-3 mb-4">
+        <div class="col-md-4 col-xl">
+          <div class="card h-100 text-center p-3">
+            <small class="text-muted">Depositado</small>
+            <h4 id="reporteDepositado" class="mb-0">$0</h4>
+          </div>
+        </div>
+
+        <div class="col-md-4 col-xl">
+          <div class="card h-100 text-center p-3">
+            <small class="text-muted">Rendido</small>
+            <h4 id="reporteRendido" class="mb-0">$0</h4>
+          </div>
+        </div>
+
+        <div class="col-md-4 col-xl">
+          <div class="card h-100 text-center p-3">
+            <small class="text-muted">Por rendir</small>
+            <h4 id="reportePorRendir" class="mb-0">$0</h4>
+          </div>
+        </div>
+
+        <div class="col-md-4 col-xl">
+          <div class="card h-100 text-center p-3">
+            <small class="text-muted">A favor colaboradores</small>
+            <h4 id="reporteSaldoFavor" class="mb-0">$0</h4>
+          </div>
+        </div>
+
+        <div class="col-md-4 col-xl">
+          <div class="card h-100 text-center p-3">
+            <small class="text-muted">Rendiciones</small>
+            <h4 id="reporteCantidadRendiciones" class="mb-0">0</h4>
+          </div>
+        </div>
+      </div>
+
+      <!-- PESTAÑAS DE REPORTES -->
+      <div class="card mb-4">
+        <div class="card-header p-0">
+          <ul class="nav nav-tabs card-header-tabs px-3 pt-2" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button
+                class="nav-link active"
+                id="resumen-tab"
+                data-bs-toggle="tab"
+                data-bs-target="#reporteResumen"
+                type="button"
+                role="tab"
+              >
+                Resumen
+              </button>
+            </li>
+
+            <li class="nav-item" role="presentation">
+              <button
+                class="nav-link"
+                id="saldos-tab"
+                data-bs-toggle="tab"
+                data-bs-target="#reporteSaldos"
+                type="button"
+                role="tab"
+              >
+                Saldos por colaborador
+              </button>
+            </li>
+
+            <li class="nav-item" role="presentation">
+              <button
+                class="nav-link"
+                id="rendiciones-tab"
+                data-bs-toggle="tab"
+                data-bs-target="#reporteRendiciones"
+                type="button"
+                role="tab"
+              >
+                Rendiciones
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        <div class="card-body">
+          <div class="tab-content">
+
+            <div class="tab-pane fade show active" id="reporteResumen" role="tabpanel">
+              <div class="row g-4">
+                <div class="col-lg-6">
+                  <h5>Distribución financiera</h5>
+                  <div
+                    id="graficoDistribucionFinanciera"
+                    class="border rounded d-flex align-items-center justify-content-center text-muted"
+                    style="min-height: 280px;"
+                  >
+                    El gráfico se cargará con los datos del reporte.
+                  </div>
+                </div>
+
+                <div class="col-lg-6">
+                  <h5>Alertas operativas</h5>
+                  <div id="alertasReportes" class="list-group">
+                    <div class="list-group-item text-muted">
+                      Cargando información de alertas...
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="tab-pane fade" id="reporteSaldos" role="tabpanel">
+              <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                  <thead>
+                    <tr>
+                      <th>Colaborador</th>
+                      <th>Centro de costo</th>
+                      <th class="text-end">Asignado</th>
+                      <th class="text-end">Rendido</th>
+                      <th class="text-end">Saldo</th>
+                      <th>Última rendición</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tablaReporteSaldos">
+                    <tr>
+                      <td colspan="6" class="text-center text-muted">
+                        Cargando saldos...
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="tab-pane fade" id="reporteRendiciones" role="tabpanel">
+              <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                  <thead>
+                    <tr>
+                      <th>Folio</th>
+                      <th>Fecha</th>
+                      <th>Colaborador</th>
+                      <th>Viaje</th>
+                      <th>Documentos</th>
+                      <th>Estado</th>
+                      <th class="text-end">Monto</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tablaReporteRendiciones">
+                    <tr>
+                      <td colspan="7" class="text-center text-muted">
+                        Cargando rendiciones...
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- EXPORTACIÓN -->
+      <div class="card">
+        <div class="card-header">
+          <strong>
+            <i class="bi bi-download me-1"></i>
+            Exportar datos
+          </strong>
+        </div>
+
+        <div class="card-body">
+          <p class="text-muted">
+            La exportación respetará el rango de fechas y los filtros aplicados.
+          </p>
+
+          <div class="d-flex flex-wrap gap-2">
+            <button type="button" id="btnExportarCSV" class="btn btn-success">
+              <i class="bi bi-filetype-csv"></i>
+              Exportar CSV
+            </button>
+
+            <button type="button" id="btnExportarExcel" class="btn btn-outline-success">
+              <i class="bi bi-file-earmark-excel"></i>
+              Exportar Excel
+            </button>
+
+            <button type="button" id="btnExportarPDF" class="btn btn-outline-danger">
+              <i class="bi bi-file-earmark-pdf"></i>
+              Exportar PDF
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../assets/js/googleSheets.js"></script>
+    <script src="../assets/js/reportes.js"></script>
+  <!-- reportes.js se agregará después de definir y verificar la respuesta de la API. -->
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const usuarioGuardado = localStorage.getItem("usuarioActual");
+
+      if (!usuarioGuardado) {
+        window.location.href = "login.html";
+        return;
+      }
+
+      let usuario;
+
+      try {
+        usuario = JSON.parse(usuarioGuardado);
+      } catch (error) {
+        console.error("Error leyendo usuarioActual:", error);
+        localStorage.removeItem("usuarioActual");
+        window.location.href = "login.html";
+        return;
+      }
+
+      const nombreUsuario = document.getElementById("nombreUsuario");
+      const btnCerrarSesion = document.getElementById("btnCerrarSesion");
+
+      if (nombreUsuario) {
+        nombreUsuario.textContent = usuario.nombre || usuario.email || "Usuario";
+      }
+
+      if (btnCerrarSesion) {
+        btnCerrarSesion.addEventListener("click", function () {
+          localStorage.removeItem("usuarioActual");
+          window.location.href = "login.html";
+        });
+      }
+    });
+  </script>
+</body>
+
+</html>

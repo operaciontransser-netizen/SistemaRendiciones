@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>Colaboradores</title>
+
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  >
+
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    rel="stylesheet"
+  >
+
+  <link
+    rel="stylesheet"
+    href="../assets/css/style.css"
+  >
+</head>
+
+
+<body>
+
+  <div class="d-flex">
+
+    <!-- =========================================
+         MENÚ LATERAL
+    ========================================== -->
+
+    <nav class="sidebar">
+
+      <h3 class="logo">
+        <i class="bi bi-receipt"></i>
+        Rendiciones
+      </h3>
+
+      <ul>
+
+        <li onclick="location.href='../index.html'">
+          <i class="bi bi-speedometer2"></i>
+          Dashboard
+        </li>
+
+        <li onclick="location.href='rendiciones.html'">
+          <i class="bi bi-wallet2"></i>
+          Rendiciones
+        </li>
+
+        <li class="active">
+          <i class="bi bi-people"></i>
+          Colaboradores
+        </li>
+
+        <li>
+          <i class="bi bi-file-earmark"></i>
+          Documentos
+        </li>
+
+        <li>
+          <i class="bi bi-graph-up"></i>
+          Reportes
+        </li>
+
+        <li>
+          <i class="bi bi-gear"></i>
+          Configuración
+        </li>
+
+      </ul>
+
+    </nav>
+
+
+    <!-- =========================================
+         CONTENIDO
+    ========================================== -->
+
+    <main class="contenido">
+
+      <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+          <h2>Colaboradores</h2>
+
+          <p class="text-muted mb-0">
+            Saldos, rendiciones y datos de colaboradores
+          </p>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+
+          <button
+            type="button"
+            class="btn btn-outline-primary"
+          >
+            <i class="bi bi-person-circle"></i>
+
+            <span id="nombreUsuario">
+              Usuario
+            </span>
+          </button>
+
+          <button
+            type="button"
+            class="btn btn-outline-danger"
+            id="btnCerrarSesion"
+          >
+            <i class="bi bi-box-arrow-right"></i>
+            Cerrar sesión
+          </button>
+
+        </div>
+
+      </div>
+
+
+      <!-- =====================================
+           INDICADORES
+      ====================================== -->
+
+      <div class="row mb-4">
+
+        <div class="col-md-6 col-xl mb-3">
+          <div class="card indicador">
+            <h5>
+              <i class="bi bi-people me-2"></i>
+              Colaboradores
+            </h5>
+
+            <h2 id="totalColaboradoresModulo">
+              -
+            </h2>
+
+            <small class="text-muted">
+              Visibles según permisos
+            </small>
+          </div>
+        </div>
+
+
+        <div class="col-md-6 col-xl mb-3">
+          <div class="card indicador">
+            <h5>
+              <i class="bi bi-cash-stack me-2"></i>
+              Asignado
+            </h5>
+
+            <h2 id="totalAsignadoColaboradores">
+              -
+            </h2>
+
+            <small class="text-muted">
+              Total asignado acumulado
+            </small>
+          </div>
+        </div>
+
+
+        <div class="col-md-6 col-xl mb-3">
+          <div class="card indicador">
+            <h5>
+              <i class="bi bi-check2-circle me-2"></i>
+              Rendido
+            </h5>
+
+            <h2 id="totalRendidoColaboradores">
+              -
+            </h2>
+
+            <small class="text-muted">
+              Total respaldado
+            </small>
+          </div>
+        </div>
+
+
+        <div class="col-md-6 col-xl mb-3">
+          <div class="card indicador">
+            <h5>
+              <i class="bi bi-hourglass-split me-2"></i>
+              Por rendir
+            </h5>
+
+            <h2 id="totalPorRendirColaboradores">
+              -
+            </h2>
+
+            <small class="text-muted">
+              Saldos positivos pendientes
+            </small>
+          </div>
+        </div>
+
+
+        <div class="col-md-6 col-xl mb-3">
+          <div class="card indicador">
+            <h5>
+              <i class="bi bi-person-up me-2"></i>
+              A favor colaboradores
+            </h5>
+
+            <h2 id="totalFavorColaboradores">
+              -
+            </h2>
+
+            <small class="text-muted">
+              Saldos negativos a favor
+            </small>
+          </div>
+        </div>
+
+      </div>
+
+
+      <!-- =====================================
+           LISTADO
+      ====================================== -->
+
+      <div class="card">
+
+        <div class="card-header d-flex justify-content-between align-items-center">
+
+          <strong>
+            Listado de Colaboradores
+          </strong>
+
+          <div style="width: 340px;">
+            <input
+              type="text"
+              id="buscarColaborador"
+              class="form-control"
+              placeholder="Buscar nombre, RUT, empresa o folio..."
+            >
+          </div>
+
+        </div>
+
+
+        <div class="card-body">
+
+          <div class="table-responsive">
+
+            <table class="table table-hover align-middle">
+
+              <thead>
+                <tr>
+                  <th>Colaborador</th>
+                  <th>Empresa</th>
+                  <th>Centro de costo</th>
+                  <th class="text-end">Asignado</th>
+                  <th class="text-end">Rendido</th>
+                  <th class="text-end">Saldo</th>
+                  <th class="text-center">Rendiciones</th>
+                  <th class="text-center">Última rendición</th>
+                </tr>
+              </thead>
+
+              <tbody id="tablaColaboradores">
+                <tr>
+                  <td colspan="8" class="text-center text-muted py-4">
+                    Cargando colaboradores...
+                  </td>
+                </tr>
+              </tbody>
+
+            </table>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </main>
+
+  </div>
+
+
+  <!-- =========================================
+       SCRIPTS
+  ========================================== -->
+
+  <script src="../assets/js/googleSheets.js"></script>
+  <script src="../assets/js/colaboradores.js"></script>
+
+
+  <script>
+
+    document.addEventListener(
+      "DOMContentLoaded",
+      function () {
+
+        const usuarioGuardado =
+          localStorage.getItem(
+            "usuarioActual"
+          );
+
+        if (!usuarioGuardado) {
+          window.location.href =
+            "login.html";
+
+          return;
+        }
+
+        let usuario;
+
+        try {
+          usuario =
+            JSON.parse(
+              usuarioGuardado
+            );
+
+        } catch (error) {
+          console.error(
+            "Error leyendo usuarioActual:",
+            error
+          );
+
+          localStorage.removeItem(
+            "usuarioActual"
+          );
+
+          window.location.href =
+            "login.html";
+
+          return;
+        }
+
+        if (
+          !usuario ||
+          !usuario.email
+        ) {
+          localStorage.removeItem(
+            "usuarioActual"
+          );
+
+          window.location.href =
+            "login.html";
+
+          return;
+        }
+
+        const nombreUsuario =
+          document.getElementById(
+            "nombreUsuario"
+          );
+
+        if (nombreUsuario) {
+          nombreUsuario.textContent =
+            usuario.nombre ||
+            usuario.email;
+        }
+
+        const btnCerrarSesion =
+          document.getElementById(
+            "btnCerrarSesion"
+          );
+
+        if (btnCerrarSesion) {
+          btnCerrarSesion.addEventListener(
+            "click",
+            function () {
+              localStorage.removeItem(
+                "usuarioActual"
+              );
+
+              window.location.href =
+                "login.html";
+            }
+          );
+        }
+
+      }
+    );
+
+  </script>
+
+</body>
+
+</html>

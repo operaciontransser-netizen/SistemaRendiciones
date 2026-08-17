@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Detalle de Rendición</title>
+
+
+    <!-- Bootstrap -->
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+
+    <!-- Bootstrap Icons -->
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+        rel="stylesheet"
+    >
+
+
+    <!-- CSS DEL SISTEMA -->
+    <link
+        rel="stylesheet"
+        href="../assets/css/style.css"
+    >
+
+</head>
+
+
+<body>
+
+
+<!-- =========================================
+     MENÚ LATERAL
+========================================= -->
+
+<nav class="sidebar">
+
+    <h3 class="logo">
+
+        <i class="bi bi-receipt"></i>
+
+        Rendiciones
+
+    </h3>
+
+
+    <ul>
+
+        <li onclick="location.href='../index.html'">
+
+            <i class="bi bi-speedometer2"></i>
+
+            Dashboard
+
+        </li>
+
+
+        <li
+            class="active"
+            onclick="location.href='rendiciones.html'"
+        >
+
+            <i class="bi bi-wallet2"></i>
+
+            Rendiciones
+
+        </li>
+
+
+        <li>
+
+            <i class="bi bi-people"></i>
+
+            Colaboradores
+
+        </li>
+
+
+        <li>
+
+            <i class="bi bi-file-earmark"></i>
+
+            Documentos
+
+        </li>
+
+
+        <li>
+
+            <i class="bi bi-graph-up"></i>
+
+            Reportes
+
+        </li>
+
+
+        <li>
+
+            <i class="bi bi-gear"></i>
+
+            Configuración
+
+        </li>
+
+    </ul>
+
+</nav>
+
+
+
+<!-- =========================================
+     CONTENIDO
+========================================= -->
+
+<main class="contenido">
+
+
+    <!-- CABECERA -->
+
+    <div
+        class="d-flex justify-content-between align-items-center mb-4"
+    >
+
+        <div>
+
+            <h2>
+                Detalle de Rendición
+            </h2>
+
+            <p class="text-muted mb-0">
+                Revisión de gastos y documentos asociados
+            </p>
+
+        </div>
+
+
+        <button
+            class="btn btn-outline-secondary"
+            onclick="location.href='rendiciones.html'"
+        >
+
+            <i class="bi bi-arrow-left"></i>
+
+            Volver
+
+        </button>
+
+    </div>
+
+
+
+    <!-- =========================================
+         INFORMACIÓN GENERAL
+    ========================================= -->
+
+    <div class="card mb-4">
+
+
+        <div class="card-header">
+
+            <strong>
+                Información de la Rendición
+            </strong>
+
+        </div>
+
+
+        <div class="card-body">
+
+
+            <div class="row">
+
+
+                <!-- FOLIO -->
+
+                <div class="col-md-3 mb-3">
+
+                    <small class="text-muted">
+                        Folio
+                    </small>
+
+                    <h5 id="detalleFolio">
+                        -
+                    </h5>
+
+                </div>
+
+
+
+                <!-- COLABORADOR -->
+
+                <div class="col-md-5 mb-3">
+
+                    <small class="text-muted">
+                        Colaborador
+                    </small>
+
+                    <h5 id="detalleColaborador">
+                        -
+                    </h5>
+
+                </div>
+
+
+
+                <!-- VIAJE -->
+
+                <div class="col-md-2 mb-3">
+
+                    <small class="text-muted">
+                        Viaje
+                    </small>
+
+                    <h5 id="detalleViaje">
+                        -
+                    </h5>
+
+                </div>
+
+
+
+                <!-- ESTADO -->
+
+                <div class="col-md-2 mb-3">
+
+                    <small class="text-muted">
+                        Estado
+                    </small>
+
+
+                    <div>
+
+                        <span
+                            id="detalleEstado"
+                            class="badge bg-warning text-dark"
+                        >
+
+                            Pendiente
+
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- =========================================
+         DOCUMENTOS
+    ========================================= -->
+
+    <div class="card mb-4">
+
+
+        <div class="card-header">
+
+            <strong>
+                Documentos de la Rendición
+            </strong>
+
+        </div>
+
+
+        <div class="card-body">
+
+
+            <div class="table-responsive">
+
+
+                <table
+                    class="table table-hover align-middle"
+                >
+
+
+                    <thead>
+
+                        <tr>
+
+                            <th>
+                                Fecha
+                            </th>
+
+                            <th>
+                                N° Documento
+                            </th>
+
+                            <th>
+                                Proveedor
+                            </th>
+
+                            <th>
+                                Tipo
+                            </th>
+
+                            <th>
+                                Descripción
+                            </th>
+
+                            <th class="text-end">
+                                Monto
+                            </th>
+
+                            <th class="text-center">
+                                Documento
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+
+
+                    <tbody id="tablaDocumentos">
+
+                        <tr>
+
+                            <td
+                                colspan="7"
+                                class="text-center text-muted"
+                            >
+
+                                Cargando documentos...
+
+                            </td>
+
+                        </tr>
+
+                    </tbody>
+
+
+                </table>
+
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- =========================================
+         AUTORIZACIÓN
+    ========================================= -->
+
+    <div
+        id="bloqueAutorizacion"
+        class="card mb-4 d-none"
+    >
+
+
+        <div
+            class="card-header d-flex align-items-center justify-content-between"
+        >
+
+            <strong>
+
+                <i class="bi bi-shield-check me-2"></i>
+
+                Autorización de la Rendición
+
+            </strong>
+
+        </div>
+
+
+        <div class="card-body">
+
+
+            <p class="text-muted">
+
+                Registro de autorización realizado por el
+                Jefe de Área.
+
+            </p>
+
+
+            <!-- DATOS DE UNA RENDICIÓN AUTORIZADA -->
+
+            <div
+                id="datosAutorizacion"
+                class="alert alert-success d-none"
+            >
+
+                <div class="row">
+
+
+                    <div class="col-md-6 mb-2 mb-md-0">
+
+                        <small class="d-block">
+                            Autorizada por
+                        </small>
+
+                        <strong id="autorizadoNombre">
+                            -
+                        </strong>
+
+                    </div>
+
+
+                    <div class="col-md-6">
+
+                        <small class="d-block">
+                            Fecha de autorización
+                        </small>
+
+                        <strong id="autorizadoEn">
+                            -
+                        </strong>
+
+                    </div>
+
+
+                </div>
+
+            </div>
+
+
+            <!-- BOTÓN SOLO PARA ROL INTERNO ADMIN -->
+
+            <button
+                type="button"
+                id="btnAutorizarRendicion"
+                class="btn btn-success d-none"
+                onclick="autorizarRendicion()"
+            >
+
+                <i class="bi bi-check-circle me-1"></i>
+
+                Autorizar rendición
+
+            </button>
+
+
+            <!-- MENSAJES DEL PROCESO -->
+
+            <div
+                id="mensajeAutorizacion"
+                class="alert alert-info mt-3 mb-0 d-none"
+                role="alert"
+            ></div>
+
+
+        </div>
+
+    </div>
+
+
+
+    <!-- =========================================
+         TOTAL Y GENERACIÓN DE PDF
+    ========================================= -->
+
+    <div class="card">
+
+
+        <div class="card-body">
+
+
+            <div class="d-flex justify-content-end">
+
+
+                <div style="min-width: 340px;">
+
+
+                    <!-- TOTAL -->
+
+                    <div
+                        class="d-flex justify-content-between align-items-center"
+                    >
+
+                        <strong>
+                            Total Rendición
+                        </strong>
+
+                        <h4
+                            id="totalRendicion"
+                            class="mb-0"
+                        >
+                            $0
+                        </h4>
+
+                    </div>
+
+
+                    <hr>
+
+
+                    <!-- PDF ACTUAL -->
+
+                    <button
+                        class="btn btn-primary w-100 mb-2"
+                        id="btnGenerarPDF"
+                        onclick="generarPDF()"
+                    >
+
+                        <i class="bi bi-file-earmark-pdf"></i>
+
+                        Generar Rendición PDF
+
+                    </button>
+
+
+
+                    <!-- PDF COMPLETO -->
+
+                    <button
+                        class="btn btn-outline-primary w-100"
+                        id="btnGenerarPDFCompleto"
+                        onclick="generarPDFCompleto()"
+                    >
+
+                        <i class="bi bi-images"></i>
+
+                        Generar PDF Completo + Comprobantes
+
+                    </button>
+
+
+                    <div
+                        class="text-muted mt-2"
+                        style="font-size: 12px;"
+                    >
+
+                        Incluye detalle de la rendición y fotografías
+                        de los comprobantes almacenados en Google Drive.
+
+                    </div>
+
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+</main>
+
+
+
+<!-- =========================================
+     JAVASCRIPT
+========================================= -->
+
+
+<!-- CONEXIÓN CON GOOGLE SHEETS -->
+
+<script
+    src="../assets/js/googleSheets.js"
+></script>
+
+
+<!-- DETALLE DE LA RENDICIÓN -->
+
+<script
+    src="../assets/js/detalleRendicion.js"
+></script>
+
+
+<!-- PDF ACTUAL -->
+
+<script
+    src="../assets/js/pdf.js"
+></script>
+
+
+<!-- PDF COMPLETO CON FOTOGRAFÍAS -->
+
+<script
+    src="../assets/js/pdfComprobantes.js"
+></script>
+
+
+</body>
+
+</html>

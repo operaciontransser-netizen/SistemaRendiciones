@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Sistema de Rendiciones</title>
+
+    <!-- Bootstrap -->
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+    <!-- Bootstrap Icons -->
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+        rel="stylesheet"
+    >
+
+    <!-- CSS -->
+    <link
+        rel="stylesheet"
+        href="assets/css/style.css"
+    >
+
+</head>
+
+
+<body>
+
+
+    <!-- =========================================
+         MENU LATERAL
+    ========================================== -->
+
+    <nav class="sidebar">
+
+        <h3 class="logo">
+            <i class="bi bi-receipt"></i>
+            Rendiciones
+        </h3>
+
+
+        <ul>
+
+            <li
+                class="active"
+                onclick="location.href='index.html'"
+            >
+                <i class="bi bi-speedometer2"></i>
+                Dashboard
+            </li>
+
+
+            <li
+                onclick="location.href='pages/rendiciones.html'"
+            >
+                <i class="bi bi-wallet2"></i>
+                Rendiciones
+            </li>
+
+
+            <li
+                onclick="location.href='pages/colaboradores.html'"
+            >
+                <i class="bi bi-people"></i>
+                Colaboradores
+            </li>
+
+
+            <li>
+                <i class="bi bi-file-earmark"></i>
+                Documentos
+            </li>
+
+
+            <li>
+                <i class="bi bi-graph-up"></i>
+                Reportes
+            </li>
+
+
+            <li>
+                <i class="bi bi-gear"></i>
+                Configuración
+            </li>
+        
+            <li onclick="location.href='pages/reportes.html'">
+            <i class="bi bi-graph-up"></i>
+            Reportes
+            
+            </li>
+        </ul>
+
+    </nav>
+
+
+    <!-- =========================================
+         CONTENIDO
+    ========================================== -->
+
+    <main class="contenido">
+
+
+        <!-- =====================================
+             TOPBAR
+        ====================================== -->
+
+        <header class="topbar">
+
+            <div>
+
+                <h2 class="mb-0">
+                    Dashboard
+                </h2>
+
+                <small
+                    id="empresaUsuario"
+                    class="text-muted"
+                >
+                    -
+                </small>
+
+            </div>
+
+
+            <div class="d-flex align-items-center gap-2">
+
+                <button
+                    class="btn btn-outline-primary"
+                    type="button"
+                >
+
+                    <i class="bi bi-person-circle"></i>
+
+                    <span id="nombreUsuario">
+                        Usuario
+                    </span>
+
+                </button>
+
+
+                <button
+                    class="btn btn-outline-danger"
+                    type="button"
+                    onclick="cerrarSesion()"
+                >
+
+                    <i class="bi bi-box-arrow-right"></i>
+
+                    Cerrar sesión
+
+                </button>
+
+            </div>
+
+        </header>
+
+
+        <!-- =====================================
+             INDICADORES
+        ====================================== -->
+
+        <div class="row mt-4">
+
+
+            <!-- TOTAL RENDICIONES -->
+
+            <div class="col-md-3 mb-3">
+
+                <div class="card indicador">
+
+                    <h5>
+                        Rendiciones
+                    </h5>
+
+                    <h2 id="totalRendiciones">
+                        -
+                    </h2>
+
+                </div>
+
+            </div>
+
+
+            <!-- TOTAL COLABORADORES -->
+
+            <div class="col-md-3 mb-3">
+
+                <div class="card indicador">
+
+                    <h5>
+                        Colaboradores
+                    </h5>
+
+                    <h2 id="totalColaboradores">
+                        -
+                    </h2>
+
+                </div>
+
+            </div>
+
+
+            <!-- TOTAL DOCUMENTOS -->
+
+            <div class="col-md-3 mb-3">
+
+                <div class="card indicador">
+
+                    <h5>
+                        Documentos
+                    </h5>
+
+                    <h2 id="totalDocumentos">
+                        -
+                    </h2>
+
+                </div>
+
+            </div>
+
+
+            <!-- PENDIENTES -->
+
+            <div class="col-md-3 mb-3">
+
+                <div class="card indicador">
+
+                    <h5>
+                        Pendientes
+                    </h5>
+
+                    <h2 id="totalPendientes">
+                        -
+                    </h2>
+
+                </div>
+
+            </div>
+
+
+        </div>
+
+
+        <!-- =====================================
+             RESUMEN FINANCIERO
+        ====================================== -->
+
+        <div class="row mt-2">
+
+            <div class="col-md-6 col-xl mb-3">
+                <div class="card indicador">
+                    <h5>
+                        <i class="bi bi-cash-stack me-2"></i>
+                        Depositado
+                    </h5>
+                    <h2 id="montoDepositado">
+                        -
+                    </h2>
+                    <small class="text-muted">
+                        Total asignado a colaboradores
+                    </small>
+                </div>
+            </div>
+
+
+            <div class="col-md-6 col-xl mb-3">
+                <div class="card indicador">
+                    <h5>
+                        <i class="bi bi-check2-circle me-2"></i>
+                        Rendido
+                    </h5>
+                    <h2 id="montoRendido">
+                        -
+                    </h2>
+                    <small class="text-muted">
+                        Total ya respaldado en rendiciones
+                    </small>
+                </div>
+            </div>
+
+
+            <div class="col-md-6 col-xl mb-3">
+                <div class="card indicador">
+                    <h5>
+                        <i class="bi bi-hourglass-split me-2"></i>
+                        Por rendir
+                    </h5>
+                    <h2 id="montoPorRendir">
+                        -
+                    </h2>
+                    <small class="text-muted">
+                        Dinero pendiente de rendición
+                    </small>
+                </div>
+            </div>
+
+
+            <div class="col-md-6 col-xl mb-3">
+                <div class="card indicador">
+                    <h5>
+                        <i class="bi bi-people-fill me-2"></i>
+                        Con saldo
+                    </h5>
+                    <h2 id="colaboradoresConSaldo">
+                        -
+                    </h2>
+                    <small class="text-muted">
+                        Colaboradores con saldo pendiente
+                    </small>
+                </div>
+            </div>
+
+
+            <div class="col-md-6 col-xl mb-3">
+                <div class="card indicador">
+                    <h5>
+                        <i class="bi bi-person-up me-2"></i>
+                        A favor colaboradores
+                    </h5>
+                    <h2 id="montoFavorColaboradores">
+                        -
+                    </h2>
+                    <small class="text-muted">
+                        <span id="colaboradoresSaldoFavor">
+                            -
+                        </span>
+                        colaborador(es) con saldo a favor
+                    </small>
+                </div>
+            </div>
+
+        </div>
+
+
+        <!-- =====================================
+             ÚLTIMAS RENDICIONES
+        ====================================== -->
+
+        <div class="card mt-4">
+
+            <div
+                class="card-header d-flex justify-content-between align-items-center"
+            >
+
+                <strong>
+                    Últimas Rendiciones
+                </strong>
+
+
+                <button
+                    class="btn btn-sm btn-outline-primary"
+                    onclick="location.href='pages/rendiciones.html'"
+                >
+                    Ver todas
+                </button>
+
+            </div>
+
+
+            <div class="card-body">
+
+                <div class="table-responsive">
+
+                    <table
+                        class="table table-hover align-middle mb-0"
+                    >
+
+                        <thead>
+
+                            <tr>
+                                <th>Folio</th>
+                                <th>Fecha</th>
+                                <th>Colaborador</th>
+                                <th>Viaje</th>
+                                <th>Documentos</th>
+                                <th>Estado</th>
+                                <th class="text-center">
+                                    Acción
+                                </th>
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody id="tablaUltimasRendiciones">
+
+                            <tr>
+
+                                <td
+                                    colspan="7"
+                                    class="text-center text-muted"
+                                >
+                                    Cargando rendiciones...
+                                </td>
+
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- =====================================
+             ACCESO RÁPIDO
+        ====================================== -->
+
+        <div class="card mt-4">
+
+            <div class="card-header">
+
+                <strong>
+                    Accesos
+                </strong>
+
+            </div>
+
+
+            <div class="card-body">
+
+                <div class="row">
+
+
+                    <div class="col-md-4 mb-3">
+
+                        <button
+                            class="btn btn-primary w-100 py-3"
+                            onclick="location.href='pages/rendiciones.html'"
+                        >
+
+                            <i class="bi bi-wallet2 me-2"></i>
+
+                            Ver Rendiciones
+
+                        </button>
+
+                    </div>
+
+
+                    <div class="col-md-4 mb-3">
+
+                        <button
+                            class="btn btn-outline-primary w-100 py-3"
+                            onclick="location.href='pages/colaboradores.html'"
+                        >
+
+                            <i class="bi bi-people me-2"></i>
+
+                            Colaboradores
+
+                        </button>
+
+                    </div>
+
+
+                    <div class="col-md-4 mb-3">
+
+                        <button
+                            class="btn btn-outline-secondary w-100 py-3"
+                            disabled
+                        >
+
+                            <i class="bi bi-graph-up me-2"></i>
+
+                            Reportes
+
+                        </button>
+
+                    </div>
+
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- =====================================
+             INFORMACIÓN DE SESIÓN
+        ====================================== -->
+
+        <div class="card mt-4 mb-4">
+
+            <div class="card-header">
+
+                <strong>
+                    Sesión actual
+                </strong>
+
+            </div>
+
+
+            <div class="card-body">
+
+                <div class="row">
+
+
+                    <div class="col-md-4 mb-3">
+
+                        <small class="text-muted">
+                            Usuario
+                        </small>
+
+                        <div
+                            id="detalleNombreUsuario"
+                            class="fw-semibold"
+                        >
+                            -
+                        </div>
+
+                    </div>
+
+
+                    <div class="col-md-4 mb-3">
+
+                        <small class="text-muted">
+                            Correo
+                        </small>
+
+                        <div
+                            id="correoUsuario"
+                            class="fw-semibold"
+                        >
+                            -
+                        </div>
+
+                    </div>
+
+
+                    <div class="col-md-2 mb-3">
+
+                        <small class="text-muted">
+                            Empresa
+                        </small>
+
+                        <div
+                            id="detalleEmpresaUsuario"
+                            class="fw-semibold"
+                        >
+                            -
+                        </div>
+
+                    </div>
+
+
+                    <div class="col-md-2 mb-3">
+
+                        <small class="text-muted">
+                            Rol
+                        </small>
+
+                        <div
+                            id="detalleRolUsuario"
+                            class="fw-semibold"
+                        >
+                            -
+                        </div>
+
+                    </div>
+
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+    </main>
+
+
+    <!-- =========================================
+         GOOGLE SHEETS
+    ========================================== -->
+
+    <script src="assets/js/googleSheets.js"></script>
+
+
+    <!-- =========================================
+         DASHBOARD
+    ========================================== -->
+
+    <script>
+
+        document.addEventListener(
+            "DOMContentLoaded",
+            async () => {
+
+
+                // =====================================
+                // SESIÓN
+                // =====================================
+
+                const sesion =
+                    localStorage.getItem(
+                        "usuarioActual"
+                    );
+
+
+                if (!sesion) {
+
+                    window.location.href =
+                        "pages/login.html";
+
+                    return;
+
+                }
+
+
+                let usuario;
+
+
+                try {
+
+                    usuario =
+                        JSON.parse(
+                            sesion
+                        );
+
+                } catch (error) {
+
+                    localStorage.removeItem(
+                        "usuarioActual"
+                    );
+
+                    window.location.href =
+                        "pages/login.html";
+
+                    return;
+
+                }
+
+
+                if (
+                    !usuario ||
+                    !usuario.email
+                ) {
+
+                    localStorage.removeItem(
+                        "usuarioActual"
+                    );
+
+                    window.location.href =
+                        "pages/login.html";
+
+                    return;
+
+                }
+
+
+                // =====================================
+                // MOSTRAR DATOS DEL USUARIO
+                // =====================================
+
+                document.getElementById(
+                    "nombreUsuario"
+                ).textContent =
+                    usuario.nombre ||
+                    usuario.email;
+
+
+                document.getElementById(
+                    "empresaUsuario"
+                ).textContent =
+                    usuario.empresa ||
+                    "-";
+
+
+                const rolVisible =
+                String(usuario.rol || "").toUpperCase() === "REVISOR"
+                ? "Administrativo"
+                : usuario.rol || "-";
+
+               document.getElementById(
+               "detalleRolUsuario"
+               ).textContent =
+               rolVisible;
+
+               
+               document.getElementById(
+               "detalleNombreUsuario"
+               ).textContent =
+               usuario.nombre ||
+               usuario.email ||
+               "-";
+
+                document.getElementById(
+                    "correoUsuario"
+                ).textContent =
+                    usuario.email ||
+                    "-";
+
+
+                document.getElementById(
+                    "detalleEmpresaUsuario"
+                ).textContent =
+                    usuario.empresa ||
+                    "-";
+
+
+                
+
+
+                // =====================================
+                // CARGAR RENDICIONES REALES
+                // =====================================
+
+                const tabla =
+                    document.getElementById(
+                        "tablaUltimasRendiciones"
+                    );
+
+
+                try {
+
+                    const rendiciones =
+                        await obtenerDatosGoogleSheets();
+
+
+                    if (!Array.isArray(rendiciones)) {
+
+                        throw new Error(
+                            "Apps Script no devolvió un listado válido."
+                        );
+
+                    }
+
+
+                    // =================================
+                    // RESUMEN FINANCIERO
+                    // =================================
+
+                    function formatearCLP(valor) {
+
+                        const numero =
+                            Number(valor || 0);
+
+                        if (!Number.isFinite(numero)) {
+                            return "$0";
+                        }
+
+                        return "$" +
+                            Math.round(numero)
+                                .toLocaleString("es-CL");
+
+                    }
+
+
+                    async function obtenerResumenFinanciero() {
+
+                        const parametros =
+                            new URLSearchParams();
+
+                        parametros.set(
+                            "usuario",
+                            usuario.email
+                        );
+
+                        parametros.set(
+                            "resumen",
+                            "1"
+                        );
+
+                        const urlResumen =
+                            `${GOOGLE_SHEETS_API}?${parametros.toString()}`;
+
+                        const respuestaResumen =
+                            await fetch(urlResumen);
+
+                        if (!respuestaResumen.ok) {
+                            throw new Error(
+                                `Error HTTP resumen financiero: ${respuestaResumen.status}`
+                            );
+                        }
+
+                        return await respuestaResumen.json();
+
+                    }
+
+
+                    try {
+
+                        const resumenFinanciero =
+                            await obtenerResumenFinanciero();
+
+                        if (
+                            resumenFinanciero &&
+                            !resumenFinanciero.error
+                        ) {
+
+                            document.getElementById(
+                                "montoDepositado"
+                            ).textContent =
+                                formatearCLP(
+                                    resumenFinanciero.monto_depositado
+                                );
+
+
+                            document.getElementById(
+                                "montoRendido"
+                            ).textContent =
+                                formatearCLP(
+                                    resumenFinanciero.monto_rendido
+                                );
+
+
+                            document.getElementById(
+                                "montoPorRendir"
+                            ).textContent =
+                                formatearCLP(
+                                    resumenFinanciero.monto_por_rendir
+                                );
+
+
+                            document.getElementById(
+                                "colaboradoresConSaldo"
+                            ).textContent =
+                                Number(
+                                    resumenFinanciero.colaboradores_con_saldo || 0
+                                );
+
+
+                            document.getElementById(
+                                "montoFavorColaboradores"
+                            ).textContent =
+                                formatearCLP(
+                                    resumenFinanciero.monto_favor_colaboradores
+                                );
+
+
+                            document.getElementById(
+                                "colaboradoresSaldoFavor"
+                            ).textContent =
+                                Number(
+                                    resumenFinanciero.colaboradores_saldo_favor || 0
+                                );
+
+                        } else {
+
+                            throw new Error(
+                                resumenFinanciero &&
+                                resumenFinanciero.error
+                                    ? resumenFinanciero.error
+                                    : "No se recibió un resumen financiero válido."
+                            );
+
+                        }
+
+                    } catch (errorResumen) {
+
+                        console.error(
+                            "Error cargando resumen financiero:",
+                            errorResumen
+                        );
+
+                        document.getElementById(
+                            "montoDepositado"
+                        ).textContent = "Error";
+
+                        document.getElementById(
+                            "montoRendido"
+                        ).textContent = "Error";
+
+                        document.getElementById(
+                            "montoPorRendir"
+                        ).textContent = "Error";
+
+                        document.getElementById(
+                            "colaboradoresConSaldo"
+                        ).textContent = "Error";
+
+                        document.getElementById(
+                            "montoFavorColaboradores"
+                        ).textContent = "Error";
+
+                        document.getElementById(
+                            "colaboradoresSaldoFavor"
+                        ).textContent = "-";
+
+                    }
+
+
+                    // =================================
+                    // TOTAL RENDICIONES
+                    // =================================
+
+                    document.getElementById(
+                        "totalRendiciones"
+                    ).textContent =
+                        rendiciones.length;
+
+
+                    // =================================
+                    // COLABORADORES ÚNICOS
+                    // =================================
+
+                    const colaboradores =
+                        new Set();
+
+
+                    rendiciones.forEach(
+                        (rendicion) => {
+
+                            const colaborador =
+                                String(
+                                    rendicion.colaborador ||
+                                    ""
+                                ).trim();
+
+
+                            if (colaborador) {
+
+                                colaboradores.add(
+                                    colaborador
+                                        .toLowerCase()
+                                );
+
+                            }
+
+                        }
+                    );
+
+
+                    document.getElementById(
+                        "totalColaboradores"
+                    ).textContent =
+                        colaboradores.size;
+
+
+                    // =================================
+                    // TOTAL DOCUMENTOS
+                    // =================================
+
+                    const totalDocumentos =
+                        rendiciones.reduce(
+                            (total, rendicion) => {
+
+                                const cantidad =
+                                    Number(
+                                        rendicion.cantidad_documentos ||
+                                        0
+                                    );
+
+
+                                return total +
+                                    (
+                                        Number.isFinite(cantidad)
+                                            ? cantidad
+                                            : 0
+                                    );
+
+                            },
+                            0
+                        );
+
+
+                    document.getElementById(
+                        "totalDocumentos"
+                    ).textContent =
+                        totalDocumentos;
+
+
+                    // =================================
+                    // PENDIENTES
+                    // =================================
+                    //
+                    // El listado actual de rendiciones
+                    // todavía muestra todas como
+                    // "Pendiente".
+                    //
+                    // Por eso, mientras no tengamos
+                    // estado real desde Apps Script,
+                    // Pendientes = rendiciones visibles.
+                    // =================================
+
+                    document.getElementById(
+                        "totalPendientes"
+                    ).textContent =
+                        rendiciones.length;
+
+
+                    // =================================
+                    // ÚLTIMAS 5 RENDICIONES
+                    // =================================
+
+                    function formatearFecha(fecha) {
+
+                        if (!fecha) {
+                            return "-";
+                        }
+
+                        const fechaObjeto =
+                            new Date(fecha);
+
+                        if (
+                            Number.isNaN(
+                                fechaObjeto.getTime()
+                            )
+                        ) {
+                            return "-";
+                        }
+
+                        return fechaObjeto.toLocaleDateString(
+                            "es-CL",
+                            {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric"
+                            }
+                        );
+
+                    }
+
+
+                    const ultimas =
+                        rendiciones
+                            .slice()
+                            .sort(
+                                (a, b) => {
+
+                                    const fechaA =
+                                        new Date(
+                                            a.procesado_en || 0
+                                        ).getTime();
+
+                                    const fechaB =
+                                        new Date(
+                                            b.procesado_en || 0
+                                        ).getTime();
+
+                                    return fechaB - fechaA;
+
+                                }
+                            )
+                            .slice(0, 5);
+
+
+                    if (!ultimas.length) {
+
+                        tabla.innerHTML = `
+                            <tr>
+                                <td
+                                    colspan="7"
+                                    class="text-center text-muted"
+                                >
+                                    No hay rendiciones disponibles.
+                                </td>
+                            </tr>
+                        `;
+
+                        return;
+
+                    }
+
+
+                    tabla.innerHTML =
+                        ultimas
+                            .map(
+                                (rendicion) => {
+
+                                    const fechaRendicion =
+                                        formatearFecha(
+                                            rendicion.procesado_en
+                                        );
+
+                                    return `
+
+                                    <tr>
+
+                                        <td>
+                                            <strong>
+                                                ${rendicion.ID || "-"}
+                                            </strong>
+                                        </td>
+
+
+                                        <td>
+                                            ${fechaRendicion}
+                                        </td>
+
+
+                                        <td>
+                                            ${rendicion.colaborador || "-"}
+                                        </td>
+
+
+                                        <td>
+                                            ${rendicion.numero_viaje || "-"}
+                                        </td>
+
+
+                                        <td>
+                                            ${rendicion.cantidad_documentos || 0}
+                                        </td>
+
+
+                                        <td>
+
+                                            <span
+                                                class="badge bg-warning text-dark"
+                                            >
+                                                Pendiente
+                                            </span>
+
+                                        </td>
+
+
+                                        <td class="text-center">
+
+                                            <button
+                                                class="btn btn-sm btn-primary"
+                                                onclick="verRendicionDashboard('${rendicion.ID || ""}')"
+                                            >
+
+                                                <i class="bi bi-eye"></i>
+                                                Ver
+
+                                            </button>
+
+                                        </td>
+
+                                    </tr>
+
+                                `;
+
+                                }
+                            )
+                            .join("");
+
+
+                } catch (error) {
+
+                    console.error(
+                        "Error cargando Dashboard:",
+                        error
+                    );
+
+
+                    document.getElementById(
+                        "totalRendiciones"
+                    ).textContent =
+                        "Error";
+
+
+                    document.getElementById(
+                        "totalColaboradores"
+                    ).textContent =
+                        "Error";
+
+
+                    document.getElementById(
+                        "totalDocumentos"
+                    ).textContent =
+                        "Error";
+
+
+                    document.getElementById(
+                        "totalPendientes"
+                    ).textContent =
+                        "Error";
+
+
+                    tabla.innerHTML = `
+                        <tr>
+                            <td
+                                colspan="7"
+                                class="text-center text-danger"
+                            >
+                                No fue posible cargar las rendiciones.
+                            </td>
+                        </tr>
+                    `;
+
+                }
+
+            }
+        );
+
+
+        // =========================================
+        // ABRIR DETALLE
+        // =========================================
+
+        function verRendicionDashboard(id) {
+
+            if (!id) {
+                return;
+            }
+
+
+            window.location.href =
+                "pages/detalle-rendicion.html?id=" +
+                encodeURIComponent(id);
+
+        }
+
+
+        // =========================================
+        // CERRAR SESIÓN
+        // =========================================
+
+        function cerrarSesion() {
+
+            localStorage.removeItem(
+                "usuarioActual"
+            );
+
+
+            window.location.href =
+                "pages/login.html";
+
+        }
+
+    </script>
+
+
+</body>
+
+</html>
