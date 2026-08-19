@@ -62,8 +62,11 @@ async function generarPDFCompleto() {
       .trim()
       .toUpperCase();
 
-    const estaAutorizada =
-      estadoRendicion === "AUTORIZADA";
+    const revisionFinalizada = [
+      "AUTORIZADA",
+      "AUTORIZADA_PARCIAL",
+      "RECHAZADA"
+    ].includes(estadoRendicion);
 
     const autorizadoNombre =
       detalle.autorizado_nombre ||
@@ -97,13 +100,52 @@ async function generarPDFCompleto() {
     const documentos =
       detalle.documentos || [];
 
-    const totalRendicion =
+    const totalPresentado =
       documentos.reduce(
         (acumulado, documento) =>
           acumulado +
           convertirMontoComprobantes(
             documento.monto_total
           ),
+        0
+      );
+
+    const obtenerEstadoDocumento = (documento) => {
+      const estadoExplicito = String(
+        documento.estado_comprobante || ""
+      ).trim().toUpperCase();
+
+      if (["AUTORIZADO", "RECHAZADO", "PENDIENTE"].includes(estadoExplicito)) {
+        return estadoExplicito;
+      }
+
+      // Compatibilidad con rendiciones históricas.
+      if (estadoRendicion === "AUTORIZADA") return "AUTORIZADO";
+      if (estadoRendicion === "RECHAZADA") return "RECHAZADO";
+      return "PENDIENTE";
+    };
+
+    const totalAutorizado = documentos
+      .filter((documento) => obtenerEstadoDocumento(documento) === "AUTORIZADO")
+      .reduce(
+        (acumulado, documento) =>
+          acumulado + convertirMontoComprobantes(documento.monto_total),
+        0
+      );
+
+    const totalRechazado = documentos
+      .filter((documento) => obtenerEstadoDocumento(documento) === "RECHAZADO")
+      .reduce(
+        (acumulado, documento) =>
+          acumulado + convertirMontoComprobantes(documento.monto_total),
+        0
+      );
+
+    const totalPendiente = documentos
+      .filter((documento) => obtenerEstadoDocumento(documento) === "PENDIENTE")
+      .reduce(
+        (acumulado, documento) =>
+          acumulado + convertirMontoComprobantes(documento.monto_total),
         0
       );
 
@@ -203,11 +245,17 @@ async function generarPDFCompleto() {
     // LOGO
     // ------------------------------------------------------
 
+    const informacionEmpresaPDF =
+      await obtenerInformacionEmpresaPDF(
+        empresa,
+        appsScriptURL
+      );
+
     const logoURL =
-      new URL(
-        "../assets/img/logo.png",
-        window.location.href
-      ).href;
+      informacionEmpresaPDF.logo;
+
+    const nombreEmpresaPDF =
+      informacionEmpresaPDF.nombre || empresa;
 
     // ------------------------------------------------------
     // TABLA DE DETALLE
@@ -216,8 +264,15 @@ async function generarPDFCompleto() {
     const filasDetalle =
       documentos
         .map((documento) => {
+          const estadoDocumento =
+            obtenerEstadoDocumento(documento);
+
+          const motivoRechazo = String(
+            documento.revision_motivo || ""
+          ).trim();
+
           return `
-            <tr>
+            <tr class="${estadoDocumento === "RECHAZADO" ? "fila-rechazada" : ""}">
 
               <td>
                 ${escaparHTMLPDF(
@@ -263,6 +318,13 @@ async function generarPDFCompleto() {
                 )}
               </td>
 
+              <td class="estado-documento">
+                ${crearEstadoDocumentoPDF(
+                  estadoDocumento,
+                  motivoRechazo
+                )}
+              </td>
+
             </tr>
           `;
         })
@@ -279,6 +341,13 @@ async function generarPDFCompleto() {
             documento,
             indice
           ) => {
+
+            const estadoDocumento =
+              obtenerEstadoDocumento(documento);
+
+            const motivoRechazo = String(
+              documento.revision_motivo || ""
+            ).trim();
 
             const fotografiaHTML =
               documento.fotoBase64
@@ -335,7 +404,7 @@ async function generarPDFCompleto() {
                   <img
                     class="logo-anexo"
                     src="${logoURL}"
-                    alt="TRANSSER"
+                    alt="${escaparHTMLPDF(nombreEmpresaPDF)}"
                   >
 
                 </div>
@@ -463,6 +532,26 @@ async function generarPDFCompleto() {
                   </tr>
 
                 </table>
+
+
+                <div class="estado-anexo ${estadoDocumento.toLowerCase()}">
+
+                  <strong>
+                    ESTADO DEL COMPROBANTE:
+                    ${escaparHTMLPDF(estadoDocumento)}
+                  </strong>
+
+                  ${
+                    estadoDocumento === "RECHAZADO"
+                      ? `
+                        <div class="motivo-anexo">
+                          MOTIVO: ${escaparHTMLPDF(motivoRechazo || "Sin motivo registrado")}
+                        </div>
+                      `
+                      : ""
+                  }
+
+                </div>
 
 
                 ${fotografiaHTML}
@@ -726,37 +815,87 @@ async function generarPDFCompleto() {
 
           .detalle th:nth-child(1),
           .detalle td:nth-child(1) {
-            width: 12%;
+            width: 10%;
           }
 
 
           .detalle th:nth-child(2),
           .detalle td:nth-child(2) {
-            width: 15%;
+            width: 12%;
           }
 
 
           .detalle th:nth-child(3),
           .detalle td:nth-child(3) {
-            width: 20%;
+            width: 17%;
           }
 
 
           .detalle th:nth-child(4),
           .detalle td:nth-child(4) {
-            width: 13%;
+            width: 10%;
           }
 
 
           .detalle th:nth-child(5),
           .detalle td:nth-child(5) {
-            width: 27%;
+            width: 25%;
           }
 
 
           .detalle th:nth-child(6),
           .detalle td:nth-child(6) {
-            width: 13%;
+            width: 11%;
+          }
+
+
+          .detalle th:nth-child(7),
+          .detalle td:nth-child(7) {
+            width: 15%;
+          }
+
+
+          .fila-rechazada td {
+            background: #fff1f1;
+          }
+
+
+          .estado-documento {
+            text-align: center;
+            font-size: 8px !important;
+          }
+
+
+          .estado-etiqueta {
+            display: inline-block;
+            padding: 2px 5px;
+            border-radius: 3px;
+            color: #ffffff;
+            font-weight: bold;
+          }
+
+
+          .estado-etiqueta.autorizado {
+            background: #198754;
+          }
+
+
+          .estado-etiqueta.rechazado {
+            background: #dc3545;
+          }
+
+
+          .estado-etiqueta.pendiente {
+            background: #ffc107;
+            color: #111111;
+          }
+
+
+          .motivo-rechazo-pdf {
+            margin-top: 4px;
+            color: #a30000;
+            font-size: 7px;
+            font-weight: bold;
           }
 
 
@@ -794,6 +933,20 @@ async function generarPDFCompleto() {
           .total-principal {
             font-weight: bold;
             font-size: 12px;
+          }
+
+
+          .total-autorizado td {
+            background: #d1e7dd;
+            color: #0f5132;
+            font-weight: bold;
+          }
+
+
+          .total-rechazado td {
+            background: #f8d7da;
+            color: #842029;
+            font-weight: bold;
           }
 
 
@@ -861,6 +1014,26 @@ async function generarPDFCompleto() {
           .autorizacion.pendiente .autorizacion-titulo {
             background: #ffc107;
             color: #111111;
+          }
+
+
+          .autorizacion.parcial {
+            border-color: #0d6efd;
+          }
+
+
+          .autorizacion.parcial .autorizacion-titulo {
+            background: #0d6efd;
+          }
+
+
+          .autorizacion.rechazada {
+            border-color: #dc3545;
+          }
+
+
+          .autorizacion.rechazada .autorizacion-titulo {
+            background: #dc3545;
           }
 
 
@@ -992,6 +1165,34 @@ async function generarPDFCompleto() {
           .monto-destacado {
             font-weight: bold;
             font-size: 11px !important;
+          }
+
+
+          .estado-anexo {
+            margin-bottom: 12px;
+            padding: 7px 9px;
+            border: 1px solid #d39e00;
+            background: #fff8db;
+            font-size: 9px;
+          }
+
+
+          .estado-anexo.autorizado {
+            border-color: #198754;
+            background: #e9f7ef;
+            color: #145c32;
+          }
+
+
+          .estado-anexo.rechazado {
+            border-color: #dc3545;
+            background: #fff1f1;
+            color: #a30000;
+          }
+
+
+          .motivo-anexo {
+            margin-top: 4px;
           }
 
 
@@ -1131,7 +1332,7 @@ async function generarPDFCompleto() {
 
                 <img
                   src="${logoURL}"
-                  alt="Logo TRANSSER"
+                  alt="Logo ${escaparHTMLPDF(nombreEmpresaPDF)}"
                 >
 
               </td>
@@ -1149,7 +1350,7 @@ async function generarPDFCompleto() {
                     </td>
 
                     <td>
-                      ${escaparHTMLPDF(empresa)}
+                      ${escaparHTMLPDF(nombreEmpresaPDF)}
                     </td>
 
                   </tr>
@@ -1248,7 +1449,11 @@ async function generarPDFCompleto() {
               </th>
 
               <th>
-                TOTAL RENDICIÓN
+                TOTAL PRESENTADO
+              </th>
+
+              <th>
+                TOTAL AUTORIZADO
               </th>
 
               <th>
@@ -1272,7 +1477,16 @@ async function generarPDFCompleto() {
               <td class="monto">
 
                 ${formatearDineroComprobantes(
-                  totalRendicion
+                  totalPresentado
+                )}
+
+              </td>
+
+
+              <td class="monto">
+
+                ${formatearDineroComprobantes(
+                  totalAutorizado
                 )}
 
               </td>
@@ -1328,6 +1542,10 @@ async function generarPDFCompleto() {
                   MONTO
                 </th>
 
+                <th>
+                  REVISIÓN
+                </th>
+
               </tr>
 
             </thead>
@@ -1349,15 +1567,54 @@ async function generarPDFCompleto() {
             <tr class="total-principal">
 
               <td>
-                TOTAL RENDICIÓN
+                TOTAL PRESENTADO
               </td>
 
               <td>
 
                 ${formatearDineroComprobantes(
-                  totalRendicion
+                  totalPresentado
                 )}
 
+              </td>
+
+            </tr>
+
+
+            <tr class="total-autorizado">
+
+              <td>
+                TOTAL AUTORIZADO
+              </td>
+
+              <td>
+                ${formatearDineroComprobantes(totalAutorizado)}
+              </td>
+
+            </tr>
+
+
+            <tr class="${totalRechazado > 0 ? "total-rechazado" : ""}">
+
+              <td>
+                TOTAL RECHAZADO
+              </td>
+
+              <td>
+                ${formatearDineroComprobantes(totalRechazado)}
+              </td>
+
+            </tr>
+
+
+            <tr>
+
+              <td>
+                PENDIENTE DE REVISIÓN
+              </td>
+
+              <td>
+                ${formatearDineroComprobantes(totalPendiente)}
               </td>
 
             </tr>
@@ -1409,12 +1666,12 @@ async function generarPDFCompleto() {
           <!-- AUTORIZACIÓN DIGITAL -->
 
           ${
-            estaAutorizada
+            revisionFinalizada
               ? `
-                <div class="autorizacion">
+                <div class="autorizacion ${claseEstadoRendicionPDF(estadoRendicion)}">
 
                   <div class="autorizacion-titulo">
-                    ESTADO: AUTORIZADA
+                    ESTADO: ${escaparHTMLPDF(etiquetaEstadoRendicionPDF(estadoRendicion))}
                   </div>
 
                   <table class="autorizacion-contenido">
@@ -1423,7 +1680,7 @@ async function generarPDFCompleto() {
 
                       <td>
                         <span class="autorizacion-label">
-                          AUTORIZADO POR
+                          REVISADO POR
                         </span>
 
                         <span class="autorizacion-valor">
@@ -1433,7 +1690,7 @@ async function generarPDFCompleto() {
 
                       <td>
                         <span class="autorizacion-label">
-                          FECHA DE AUTORIZACIÓN
+                          FECHA DE REVISIÓN
                         </span>
 
                         <span class="autorizacion-valor">
@@ -1490,7 +1747,8 @@ async function generarPDFCompleto() {
           <div class="pie-general">
 
             Documento generado por
-            Sistema de Rendiciones TRANSSER
+            Sistema de Rendiciones
+            ${escaparHTMLPDF(nombreEmpresaPDF)}
 
           </div>
 
@@ -1508,7 +1766,7 @@ async function generarPDFCompleto() {
 
           <img
             src="${logoURL}"
-            alt="TRANSSER"
+            alt="${escaparHTMLPDF(nombreEmpresaPDF)}"
           >
 
 
@@ -1603,6 +1861,211 @@ async function generarPDFCompleto() {
     }
 
   }
+}
+
+
+
+// ==========================================================
+// EMPRESA Y LOGO DEL PDF
+// ==========================================================
+
+async function obtenerInformacionEmpresaPDF(
+  codigoEmpresa,
+  appsScriptURL
+) {
+  const codigoNormalizado =
+    normalizarEmpresaPDF(codigoEmpresa);
+
+  const logoRespaldo = new URL(
+    "../assets/img/logo.png",
+    window.location.href
+  ).href;
+
+  const logosLocales = {
+    TRANSSER: new URL(
+      "../assets/img/logo-transser.jpeg",
+      window.location.href
+    ).href,
+    SERVIND: new URL(
+      "../assets/img/logo-servind.jpeg",
+      window.location.href
+    ).href
+  };
+
+  const logoLocalEmpresa =
+    logosLocales[codigoNormalizado] || "";
+
+  const resultado = {
+    codigo: codigoEmpresa || "",
+    nombre: codigoEmpresa || "TRANSSER",
+    rut: "",
+    logo: logoLocalEmpresa || logoRespaldo
+  };
+
+  try {
+    if (typeof solicitarAppsScript !== "function") {
+      return resultado;
+    }
+
+    const empresas = await solicitarAppsScript({
+      empresas: "1"
+    });
+
+    if (!Array.isArray(empresas)) {
+      return resultado;
+    }
+
+    const empresaEncontrada = empresas.find((item) => {
+      const codigo = normalizarEmpresaPDF(item.codigo_empresa);
+      const nombre = normalizarEmpresaPDF(item.nombre_empresa);
+
+      return codigo === codigoNormalizado || nombre === codigoNormalizado;
+    });
+
+    if (!empresaEncontrada) {
+      return resultado;
+    }
+
+    resultado.codigo =
+      empresaEncontrada.codigo_empresa || codigoEmpresa || "";
+
+    resultado.nombre =
+      empresaEncontrada.nombre_empresa || resultado.codigo || resultado.nombre;
+
+    resultado.rut =
+      empresaEncontrada.rut_empresa || "";
+
+    const logoConfigurado = String(
+      empresaEncontrada.logo_url || ""
+    ).trim();
+
+    // TRANSSER y SERVIND usan archivos locales para evitar
+    // bloqueos de Drive durante la generación del PDF.
+    // logo_url queda como alternativa para empresas futuras.
+    if (!logoLocalEmpresa && logoConfigurado) {
+      resultado.logo = await convertirLogoEmpresaPDF(
+        logoConfigurado,
+        appsScriptURL
+      );
+    }
+  } catch (error) {
+    console.warn(
+      "No fue posible obtener el logo configurado de la empresa:",
+      error
+    );
+  }
+
+  return resultado;
+}
+
+
+async function convertirLogoEmpresaPDF(
+  logoConfigurado,
+  appsScriptURL
+) {
+  const idDrive =
+    extraerIdDrivePDF(logoConfigurado);
+
+  if (!idDrive) {
+    return logoConfigurado;
+  }
+
+  try {
+    const respuesta = await fetch(
+      `${appsScriptURL}?foto=${encodeURIComponent(idDrive)}`,
+      { cache: "no-store" }
+    );
+
+    if (!respuesta.ok) {
+      throw new Error(`HTTP ${respuesta.status}`);
+    }
+
+    const datos = await respuesta.json();
+
+    if (datos.dataUrl) {
+      return datos.dataUrl;
+    }
+  } catch (error) {
+    console.warn(
+      "No fue posible convertir el logo de Drive:",
+      error
+    );
+  }
+
+  return logoConfigurado;
+}
+
+
+function normalizarEmpresaPDF(valor) {
+  const texto = String(valor || "")
+    .trim()
+    .toUpperCase();
+
+  if (texto === "SERVICIOS INDUSTRIALES") {
+    return "SERVIND";
+  }
+
+  return texto;
+}
+
+
+// ==========================================================
+// ESTADOS DE REVISIÓN DEL PDF
+// ==========================================================
+
+function crearEstadoDocumentoPDF(
+  estado,
+  motivo
+) {
+  const estadoNormalizado = String(
+    estado || "PENDIENTE"
+  ).trim().toUpperCase();
+
+  const clase =
+    estadoNormalizado.toLowerCase();
+
+  return `
+    <span class="estado-etiqueta ${escaparHTMLPDF(clase)}">
+      ${escaparHTMLPDF(estadoNormalizado)}
+    </span>
+    ${
+      estadoNormalizado === "RECHAZADO"
+        ? `
+          <div class="motivo-rechazo-pdf">
+            ${escaparHTMLPDF(motivo || "Sin motivo registrado")}
+          </div>
+        `
+        : ""
+    }
+  `;
+}
+
+
+function etiquetaEstadoRendicionPDF(estado) {
+  const estadoNormalizado = String(
+    estado || "PENDIENTE"
+  ).trim().toUpperCase();
+
+  const etiquetas = {
+    AUTORIZADA: "AUTORIZADA",
+    AUTORIZADA_PARCIAL: "AUTORIZADA PARCIALMENTE",
+    RECHAZADA: "RECHAZADA",
+    PENDIENTE: "PENDIENTE"
+  };
+
+  return etiquetas[estadoNormalizado] || estadoNormalizado;
+}
+
+
+function claseEstadoRendicionPDF(estado) {
+  const estadoNormalizado = String(
+    estado || "PENDIENTE"
+  ).trim().toUpperCase();
+
+  if (estadoNormalizado === "AUTORIZADA_PARCIAL") return "parcial";
+  if (estadoNormalizado === "RECHAZADA") return "rechazada";
+  if (estadoNormalizado === "PENDIENTE") return "pendiente";
+  return "";
 }
 
 

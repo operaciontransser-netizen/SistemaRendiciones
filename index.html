@@ -42,9 +42,15 @@
 
     <nav class="sidebar">
 
-        <h3 class="logo">
-            <i class="bi bi-receipt"></i>
-            Rendiciones
+        <h3 class="logo text-center">
+            <img
+                src="assets/img/logo-integra.png"
+                alt="Empresas Integra"
+                style="display: block; width: 170px; max-width: 100%; max-height: 72px; object-fit: contain; margin: 0 auto 10px; padding: 5px; background: #ffffff; border-radius: 4px;"
+            >
+            <span style="display: block;">
+                Rendiciones
+            </span>
         </h3>
 
 
@@ -81,7 +87,7 @@
             </li>
 
 
-            <li>
+            <li onclick="location.href='pages/reportes.html'">
                 <i class="bi bi-graph-up"></i>
                 Reportes
             </li>
@@ -91,12 +97,7 @@
                 <i class="bi bi-gear"></i>
                 Configuración
             </li>
-        
-            <li onclick="location.href='pages/reportes.html'">
-            <i class="bi bi-graph-up"></i>
-            Reportes
-            
-            </li>
+
         </ul>
 
     </nav>
@@ -132,6 +133,22 @@
 
 
             <div class="d-flex align-items-center gap-2">
+
+                <div
+                    id="contenedorSelectorEmpresa"
+                    class="d-none"
+                    style="min-width: 230px;"
+                >
+                    <select
+                        id="selectorEmpresa"
+                        class="form-select"
+                        aria-label="Seleccionar empresa"
+                    >
+                        <option value="">
+                            Todas las empresas
+                        </option>
+                    </select>
+                </div>
 
                 <button
                     class="btn btn-outline-primary"
@@ -275,14 +292,62 @@
             <div class="col-md-6 col-xl mb-3">
                 <div class="card indicador">
                     <h5>
+                        <i class="bi bi-receipt-cutoff me-2"></i>
+                        Presentado
+                    </h5>
+                    <h2 id="montoPresentado">
+                        -
+                    </h2>
+                    <small class="text-muted">
+                        Total recibido en comprobantes
+                    </small>
+                </div>
+            </div>
+
+
+            <div class="col-md-6 col-xl mb-3">
+                <div class="card indicador">
+                    <h5>
                         <i class="bi bi-check2-circle me-2"></i>
-                        Rendido
+                        Autorizado
                     </h5>
                     <h2 id="montoRendido">
                         -
                     </h2>
                     <small class="text-muted">
-                        Total ya respaldado en rendiciones
+                        Total aprobado por Jefe de Área
+                    </small>
+                </div>
+            </div>
+
+
+            <div class="col-md-6 col-xl mb-3">
+                <div class="card indicador">
+                    <h5>
+                        <i class="bi bi-clock-history me-2"></i>
+                        Pendiente revisión
+                    </h5>
+                    <h2 id="montoPendienteRevision">
+                        -
+                    </h2>
+                    <small class="text-muted">
+                        Comprobantes aún no autorizados
+                    </small>
+                </div>
+            </div>
+
+
+            <div class="col-md-6 col-xl mb-3">
+                <div class="card indicador">
+                    <h5>
+                        <i class="bi bi-x-circle me-2"></i>
+                        Rechazado
+                    </h5>
+                    <h2 id="montoRechazado">
+                        -
+                    </h2>
+                    <small class="text-muted">
+                        Comprobantes no aceptados
                     </small>
                 </div>
             </div>
@@ -470,8 +535,8 @@
                     <div class="col-md-4 mb-3">
 
                         <button
-                            class="btn btn-outline-secondary w-100 py-3"
-                            disabled
+                            class="btn btn-outline-primary w-100 py-3"
+                            onclick="location.href='pages/reportes.html'"
                         >
 
                             <i class="bi bi-graph-up me-2"></i>
@@ -681,10 +746,21 @@
                     "-";
 
 
+                const rolInterno =
+                    String(usuario.rol || "")
+                        .trim()
+                        .toUpperCase()
+                        .replace(/_/g, " ")
+                        .replace(/\s+/g, " ");
+
                 const rolVisible =
-                String(usuario.rol || "").toUpperCase() === "REVISOR"
-                ? "Administrativo"
-                : usuario.rol || "-";
+                    rolInterno === "SUPER ADMIN"
+                        ? "Super Administrador"
+                        : rolInterno === "ADMIN"
+                        ? "Jefe de Área"
+                        : rolInterno === "REVISOR"
+                            ? "Administrativo"
+                            : usuario.rol || "-";
 
                document.getElementById(
                "detalleRolUsuario"
@@ -713,6 +789,179 @@
                     "-";
 
 
+                // =====================================
+                // EMPRESA ACTIVA DEL DASHBOARD
+                // =====================================
+
+                const esSuperAdmin =
+                    rolInterno === "SUPER ADMIN";
+
+
+                async function configurarSelectorEmpresa() {
+
+                    if (!esSuperAdmin) {
+                        localStorage.removeItem(
+                            "empresaSeleccionada"
+                        );
+
+                        return "";
+                    }
+
+                    const contenedor =
+                        document.getElementById(
+                            "contenedorSelectorEmpresa"
+                        );
+
+                    const selector =
+                        document.getElementById(
+                            "selectorEmpresa"
+                        );
+
+                    const parametros =
+                        new URLSearchParams();
+
+                    parametros.set(
+                        "usuario",
+                        usuario.email
+                    );
+
+                    parametros.set(
+                        "empresas",
+                        "1"
+                    );
+
+                    const respuesta = await fetch(
+                        `${GOOGLE_SHEETS_API}?${parametros.toString()}`,
+                        { cache: "no-store" }
+                    );
+
+                    if (!respuesta.ok) {
+                        throw new Error(
+                            `Error HTTP empresas: ${respuesta.status}`
+                        );
+                    }
+
+                    const empresas =
+                        await respuesta.json();
+
+                    if (!Array.isArray(empresas)) {
+                        throw new Error(
+                            empresas && empresas.error
+                                ? empresas.error
+                                : "No se recibió el listado de empresas."
+                        );
+                    }
+
+                    empresas.forEach((empresa) => {
+                        const opcion =
+                            document.createElement("option");
+
+                        opcion.value =
+                            empresa.codigo_empresa || "";
+
+                        opcion.textContent =
+                            empresa.nombre_empresa ||
+                            empresa.codigo_empresa ||
+                            "Empresa";
+
+                        selector.appendChild(opcion);
+                    });
+
+                    const empresaGuardada =
+                        localStorage.getItem(
+                            "empresaSeleccionada"
+                        ) || "";
+
+                    const empresaValida =
+                        !empresaGuardada ||
+                        empresas.some(
+                            (empresa) =>
+                                empresa.codigo_empresa ===
+                                empresaGuardada
+                        );
+
+                    selector.value =
+                        empresaValida
+                            ? empresaGuardada
+                            : "";
+
+                    contenedor.classList.remove(
+                        "d-none"
+                    );
+
+                    selector.addEventListener(
+                        "change",
+                        () => {
+                            localStorage.setItem(
+                                "empresaSeleccionada",
+                                selector.value
+                            );
+
+                            window.location.reload();
+                        }
+                    );
+
+                    return selector.value;
+                }
+
+
+                const empresaActiva =
+                    await configurarSelectorEmpresa();
+
+
+                if (esSuperAdmin) {
+                    document.getElementById(
+                        "empresaUsuario"
+                    ).textContent =
+                        empresaActiva ||
+                        "Todas las empresas";
+
+                    document.getElementById(
+                        "detalleEmpresaUsuario"
+                    ).textContent =
+                        empresaActiva ||
+                        "Todas las empresas";
+                }
+
+
+                async function obtenerRendicionesDashboard() {
+
+                    const parametros =
+                        new URLSearchParams();
+
+                    parametros.set(
+                        "usuario",
+                        usuario.email
+                    );
+
+                    if (empresaActiva) {
+                        parametros.set(
+                            "empresa",
+                            empresaActiva
+                        );
+                    }
+
+                    const respuesta = await fetch(
+                        `${GOOGLE_SHEETS_API}?${parametros.toString()}`,
+                        { cache: "no-store" }
+                    );
+
+                    if (!respuesta.ok) {
+                        throw new Error(
+                            `Error HTTP rendiciones: ${respuesta.status}`
+                        );
+                    }
+
+                    const datos = await respuesta.json();
+
+                    if (datos && datos.error) {
+                        throw new Error(datos.error);
+                    }
+
+                    return datos;
+                }
+
+
                 
 
 
@@ -729,7 +978,7 @@
                 try {
 
                     const rendiciones =
-                        await obtenerDatosGoogleSheets();
+                        await obtenerRendicionesDashboard();
 
 
                     if (!Array.isArray(rendiciones)) {
@@ -776,6 +1025,13 @@
                             "1"
                         );
 
+                        if (empresaActiva) {
+                            parametros.set(
+                                "empresa",
+                                empresaActiva
+                            );
+                        }
+
                         const urlResumen =
                             `${GOOGLE_SHEETS_API}?${parametros.toString()}`;
 
@@ -812,10 +1068,34 @@
 
 
                             document.getElementById(
+                                "montoPresentado"
+                            ).textContent =
+                                formatearCLP(
+                                    resumenFinanciero.monto_presentado
+                                );
+
+
+                            document.getElementById(
                                 "montoRendido"
                             ).textContent =
                                 formatearCLP(
                                     resumenFinanciero.monto_rendido
+                                );
+
+
+                            document.getElementById(
+                                "montoPendienteRevision"
+                            ).textContent =
+                                formatearCLP(
+                                    resumenFinanciero.monto_pendiente_revision
+                                );
+
+
+                            document.getElementById(
+                                "montoRechazado"
+                            ).textContent =
+                                formatearCLP(
+                                    resumenFinanciero.monto_rechazado
                                 );
 
 
@@ -874,6 +1154,18 @@
 
                         document.getElementById(
                             "montoRendido"
+                        ).textContent = "Error";
+
+                        document.getElementById(
+                            "montoPresentado"
+                        ).textContent = "Error";
+
+                        document.getElementById(
+                            "montoPendienteRevision"
+                        ).textContent = "Error";
+
+                        document.getElementById(
+                            "montoRechazado"
                         ).textContent = "Error";
 
                         document.getElementById(
@@ -976,22 +1268,26 @@
 
 
                     // =================================
-                    // PENDIENTES
+                    // PENDIENTES REALES
                     // =================================
-                    //
-                    // El listado actual de rendiciones
-                    // todavía muestra todas como
-                    // "Pendiente".
-                    //
-                    // Por eso, mientras no tengamos
-                    // estado real desde Apps Script,
-                    // Pendientes = rendiciones visibles.
-                    // =================================
+
+                    const totalPendientes =
+                        rendiciones.filter(
+                            (rendicion) =>
+                                String(
+                                    rendicion.estado_rendicion ||
+                                    "PENDIENTE"
+                                )
+                                    .trim()
+                                    .toUpperCase() ===
+                                "PENDIENTE"
+                        ).length;
+
 
                     document.getElementById(
                         "totalPendientes"
                     ).textContent =
-                        rendiciones.length;
+                        totalPendientes;
 
 
                     // =================================
@@ -1078,6 +1374,75 @@
                                             rendicion.procesado_en
                                         );
 
+                                    const estadoRendicion =
+                                        String(
+                                            rendicion.estado_rendicion ||
+                                            "PENDIENTE"
+                                        )
+                                            .trim()
+                                            .toUpperCase();
+
+
+                                    let badgeEstado;
+
+
+                                    switch (estadoRendicion) {
+
+                                        case "AUTORIZADA":
+
+                                            badgeEstado = `
+                                                <span class="badge bg-success">
+                                                    Autorizada
+                                                </span>
+                                            `;
+
+                                            break;
+
+
+                                        case "AUTORIZADA_PARCIAL":
+
+                                            badgeEstado = `
+                                                <span class="badge bg-primary">
+                                                    Autorizada parcialmente
+                                                </span>
+                                            `;
+
+                                            break;
+
+
+                                        case "RECHAZADA":
+
+                                            badgeEstado = `
+                                                <span class="badge bg-danger">
+                                                    Rechazada
+                                                </span>
+                                            `;
+
+                                            break;
+
+
+                                        case "PENDIENTE":
+
+                                            badgeEstado = `
+                                                <span class="badge bg-warning text-dark">
+                                                    Pendiente
+                                                </span>
+                                            `;
+
+                                            break;
+
+
+                                        default:
+
+                                            badgeEstado = `
+                                                <span class="badge bg-secondary">
+                                                    ${estadoRendicion || "Sin estado"}
+                                                </span>
+                                            `;
+
+                                    }
+
+
                                     return `
 
                                     <tr>
@@ -1110,13 +1475,7 @@
 
 
                                         <td>
-
-                                            <span
-                                                class="badge bg-warning text-dark"
-                                            >
-                                                Pendiente
-                                            </span>
-
+                                            ${badgeEstado}
                                         </td>
 
 

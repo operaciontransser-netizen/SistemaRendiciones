@@ -39,6 +39,69 @@ function obtenerUsuarioActual() {
 
 
 // ======================================================
+// ROL Y EMPRESA SELECCIONADA
+// ======================================================
+
+function normalizarRolUsuario(rol) {
+  return String(rol || "")
+    .trim()
+    .toUpperCase()
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ");
+}
+
+
+function esUsuarioSuperAdmin(usuario) {
+  return normalizarRolUsuario(
+    usuario && usuario.rol
+  ) === "SUPER ADMIN";
+}
+
+
+function obtenerEmpresaSeleccionada() {
+  const usuario =
+    obtenerUsuarioActual();
+
+  if (!esUsuarioSuperAdmin(usuario)) {
+    return "";
+  }
+
+  return String(
+    localStorage.getItem(
+      "empresaSeleccionada"
+    ) || ""
+  ).trim();
+}
+
+
+function guardarEmpresaSeleccionada(
+  codigoEmpresa = ""
+) {
+  const usuario =
+    obtenerUsuarioActual();
+
+  if (!esUsuarioSuperAdmin(usuario)) {
+    localStorage.removeItem(
+      "empresaSeleccionada"
+    );
+
+    return "";
+  }
+
+  const empresa = String(
+    codigoEmpresa || ""
+  ).trim();
+
+  localStorage.setItem(
+    "empresaSeleccionada",
+    empresa
+  );
+
+  return empresa;
+}
+
+
+// ======================================================
 // REALIZAR SOLICITUD AL APPS SCRIPT
 // ======================================================
 
@@ -76,6 +139,24 @@ async function solicitarAppsScript(
       );
     }
   });
+
+  // El filtro global solo se envía para SUPER ADMIN.
+  // Si una función indicó empresa explícitamente,
+  // ese valor tiene prioridad.
+  if (
+    esUsuarioSuperAdmin(usuario) &&
+    !parametros.has("empresa")
+  ) {
+    const empresaSeleccionada =
+      obtenerEmpresaSeleccionada();
+
+    if (empresaSeleccionada) {
+      parametros.set(
+        "empresa",
+        empresaSeleccionada
+      );
+    }
+  }
 
   const url =
     `${GOOGLE_SHEETS_API}?${parametros.toString()}`;
@@ -122,6 +203,39 @@ async function solicitarAppsScript(
 
 
 // ======================================================
+// OBTENER EMPRESAS DISPONIBLES
+// ======================================================
+
+async function obtenerEmpresasGoogleSheets() {
+  const usuario =
+    obtenerUsuarioActual();
+
+  if (!usuario) {
+    return [];
+  }
+
+  try {
+    const empresas =
+      await solicitarAppsScript({
+        empresas: "1"
+      });
+
+    return Array.isArray(empresas)
+      ? empresas
+      : [];
+
+  } catch (error) {
+    console.error(
+      "Error cargando empresas:",
+      error
+    );
+
+    return [];
+  }
+}
+
+
+// ======================================================
 // OBTENER LISTADO O DETALLE DE RENDICIONES
 // ======================================================
 
@@ -154,7 +268,8 @@ async function obtenerDatosGoogleSheets(
 
 // ======================================================
 // AUTORIZAR RENDICIÓN
-// SOLO EL ROL INTERNO ADMIN PUEDE EJECUTARLA
+// ADMIN Y SUPER ADMIN PUEDEN SOLICITAR LA ACCIÓN.
+// EL APPS SCRIPT VALIDA EMPRESA Y RUT ASIGNADO.
 // ======================================================
 
 async function autorizarRendicionGoogleSheets(
@@ -176,15 +291,16 @@ async function autorizarRendicionGoogleSheets(
   }
 
   const rol =
-    String(
-      usuario.rol || ""
-    )
-      .trim()
-      .toUpperCase();
+    normalizarRolUsuario(
+      usuario.rol
+    );
 
-  if (rol !== "ADMIN") {
+  if (
+    rol !== "ADMIN" &&
+    rol !== "SUPER ADMIN"
+  ) {
     throw new Error(
-      "Solo el Jefe de Área puede autorizar rendiciones."
+      "Solo el Jefe de Área o Super Administrador puede autorizar rendiciones."
     );
   }
 

@@ -4,288 +4,178 @@ document.addEventListener("DOMContentLoaded", async () => {
   const tabla = document.getElementById("tablaRendiciones");
   const totalRendiciones = document.getElementById("totalRendiciones");
   const buscador = document.getElementById("buscarRendicion");
+  const contenedorEmpresa = document.getElementById("contenedorSelectorEmpresaRendiciones");
+  const selectorEmpresa = document.getElementById("selectorEmpresaRendiciones");
 
   if (!tabla || !totalRendiciones || !buscador) {
     console.error("No se encontraron elementos de la página Rendiciones.");
     return;
   }
 
+  function mostrarMensaje(mensaje, clase = "text-muted") {
+    tabla.innerHTML = `<tr><td colspan="8" class="text-center ${clase}">${escaparHTML(mensaje)}</td></tr>`;
+  }
+
   tabla.innerHTML = `
-    <tr>
-      <td colspan="7" class="text-center text-muted">
-        <div class="spinner-border spinner-border-sm me-2" role="status"></div>
-        Cargando rendiciones...
-      </td>
-    </tr>
-  `;
+    <tr><td colspan="8" class="text-center text-muted">
+      <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+      Cargando rendiciones...
+    </td></tr>`;
 
-  const rendiciones = await obtenerDatosGoogleSheets();
-
-  console.log("Rendiciones recibidas:", rendiciones);
-
-  if (!Array.isArray(rendiciones)) {
-    tabla.innerHTML = `
-      <tr>
-        <td colspan="7" class="text-center text-danger">
-          Error al cargar las rendiciones.
-        </td>
-      </tr>
-    `;
+  const usuario = obtenerUsuarioActual();
+  if (!usuario) {
+    window.location.href = "login.html";
     return;
   }
 
-  totalRendiciones.textContent = rendiciones.length;
+  const rol = String(usuario.rol || "").trim().toUpperCase();
+  const esSuperAdmin = rol === "SUPER ADMIN";
+  let empresaActiva = "";
 
-  // ======================================================
-  // FECHAS Y ORDEN
-  // ======================================================
+  try {
+    if (esSuperAdmin && selectorEmpresa && contenedorEmpresa) {
+      const empresas = await solicitarAppsScript({ empresas: "1" });
+      if (!Array.isArray(empresas)) throw new Error("No fue posible obtener las empresas.");
 
-  function obtenerTiempoProcesado(fecha) {
-    if (!fecha) {
-      return Number.NEGATIVE_INFINITY;
-    }
+      selectorEmpresa.innerHTML = `
+        <option value="">Todas las empresas</option>
+        ${empresas.map((empresa) => {
+          const codigo = String(empresa.codigo_empresa || "").trim();
+          const nombre = String(empresa.nombre_empresa || codigo || "Empresa").trim();
+          return `<option value="${escaparHTML(codigo)}">${escaparHTML(nombre)}</option>`;
+        }).join("")}`;
 
-    const texto = String(fecha).trim();
+      const empresaGuardada = String(localStorage.getItem("empresaSeleccionada") || "").trim();
+      const valoresValidos = Array.from(selectorEmpresa.options).map((opcion) => opcion.value);
+      empresaActiva = valoresValidos.includes(empresaGuardada) ? empresaGuardada : "";
+      selectorEmpresa.value = empresaActiva;
+      contenedorEmpresa.classList.remove("d-none");
 
-    if (!texto) {
-      return Number.NEGATIVE_INFINITY;
-    }
-
-    // Formato chileno: dd-mm-yyyy o dd/mm/yyyy,
-    // opcionalmente acompañado de hora.
-    const fechaChilena = texto.match(
-      /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/
-    );
-
-    if (fechaChilena) {
-      const dia = Number(fechaChilena[1]);
-      const mes = Number(fechaChilena[2]) - 1;
-      const anio = Number(fechaChilena[3]);
-      const hora = Number(fechaChilena[4] || 0);
-      const minuto = Number(fechaChilena[5] || 0);
-      const segundo = Number(fechaChilena[6] || 0);
-
-      return new Date(
-        anio,
-        mes,
-        dia,
-        hora,
-        minuto,
-        segundo
-      ).getTime();
-    }
-
-    // Formatos ISO: yyyy-mm-dd o fecha/hora completa.
-    const tiempo = Date.parse(texto);
-
-    return Number.isNaN(tiempo)
-      ? Number.NEGATIVE_INFINITY
-      : tiempo;
-  }
-
-  function ordenarPorFechaDescendente(lista) {
-    return lista
-      .map((rendicion, indiceOriginal) => ({
-        rendicion,
-        indiceOriginal,
-        tiempo: obtenerTiempoProcesado(rendicion.procesado_en)
-      }))
-      .sort((a, b) => {
-        if (a.tiempo !== b.tiempo) {
-          return b.tiempo - a.tiempo;
+      selectorEmpresa.addEventListener("change", () => {
+        if (selectorEmpresa.value) {
+          localStorage.setItem("empresaSeleccionada", selectorEmpresa.value);
+        } else {
+          localStorage.removeItem("empresaSeleccionada");
         }
-
-        // Si dos rendiciones tienen la misma fecha,
-        // conservamos el orden recibido desde la API.
-        return a.indiceOriginal - b.indiceOriginal;
-      })
-      .map((elemento) => elemento.rendicion);
-  }
-
-  function formatearFecha(fecha) {
-    if (!fecha) {
-      return "-";
+        window.location.reload();
+      });
+    } else {
+      localStorage.removeItem("empresaSeleccionada");
     }
 
-    const texto = String(fecha).trim();
+    const rendiciones = await solicitarAppsScript(empresaActiva ? { empresa: empresaActiva } : {});
+    console.log("Rendiciones recibidas:", rendiciones);
+    if (!Array.isArray(rendiciones)) throw new Error("La API no devolvió un listado válido.");
 
-    const fechaISO = texto.match(
-      /^(\d{4})-(\d{2})-(\d{2})/
-    );
+    totalRendiciones.textContent = rendiciones.length;
 
-    if (fechaISO) {
-      return `${fechaISO[3]}-${fechaISO[2]}-${fechaISO[1]}`;
+    function obtenerTiempoProcesado(fecha) {
+      if (!fecha) return Number.NEGATIVE_INFINITY;
+      const texto = String(fecha).trim();
+      const chilena = texto.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+      if (chilena) {
+        return new Date(
+          Number(chilena[3]), Number(chilena[2]) - 1, Number(chilena[1]),
+          Number(chilena[4] || 0), Number(chilena[5] || 0), Number(chilena[6] || 0)
+        ).getTime();
+      }
+      const tiempo = Date.parse(texto);
+      return Number.isNaN(tiempo) ? Number.NEGATIVE_INFINITY : tiempo;
     }
 
-    const fechaChilena = texto.match(
-      /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/
-    );
-
-    if (fechaChilena) {
-      const dia = fechaChilena[1].padStart(2, "0");
-      const mes = fechaChilena[2].padStart(2, "0");
-      const anio = fechaChilena[3];
-
-      return `${dia}-${mes}-${anio}`;
+    function ordenarPorFechaDescendente(lista) {
+      return lista.map((rendicion, indiceOriginal) => ({
+        rendicion, indiceOriginal, tiempo: obtenerTiempoProcesado(rendicion.procesado_en)
+      })).sort((a, b) => a.tiempo !== b.tiempo
+        ? b.tiempo - a.tiempo
+        : a.indiceOriginal - b.indiceOriginal
+      ).map((elemento) => elemento.rendicion);
     }
 
-    const fechaObjeto = new Date(texto);
-
-    if (Number.isNaN(fechaObjeto.getTime())) {
-      return texto;
+    function formatearFecha(fecha) {
+      if (!fecha) return "-";
+      const texto = String(fecha).trim();
+      const iso = texto.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (iso) return `${iso[3]}-${iso[2]}-${iso[1]}`;
+      const chilena = texto.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
+      if (chilena) return `${chilena[1].padStart(2, "0")}-${chilena[2].padStart(2, "0")}-${chilena[3]}`;
+      const objeto = new Date(texto);
+      if (Number.isNaN(objeto.getTime())) return texto;
+      return objeto.toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric" });
     }
 
-    return fechaObjeto.toLocaleDateString("es-CL", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric"
-    });
-  }
-
-  const rendicionesOrdenadas = ordenarPorFechaDescendente(rendiciones);
-
-  // ======================================================
-  // PRESENTACIÓN DEL ESTADO
-  // ======================================================
-
-  function obtenerEstadoRendicion(rendicion) {
-    return String(rendicion.estado_rendicion || "PENDIENTE")
-      .trim()
-      .toUpperCase();
-  }
-
-  function crearBadgeEstado(rendicion) {
-    const estado = obtenerEstadoRendicion(rendicion);
-
-    if (estado === "AUTORIZADA") {
-      return `
-        <span class="badge bg-success">
-          Autorizada
-        </span>
-      `;
+    function obtenerEstadoRendicion(rendicion) {
+      return String(rendicion.estado_rendicion || "PENDIENTE").trim().toUpperCase();
     }
 
-    return `
-      <span class="badge bg-warning text-dark">
-        Pendiente
-      </span>
-    `;
-  }
-
-  // ======================================================
-  // RENDERIZAR TABLA
-  // ======================================================
-
-  function renderizar(lista) {
-    if (!lista.length) {
-      tabla.innerHTML = `
-        <tr>
-          <td colspan="7" class="text-center text-muted">
-            No se encontraron rendiciones.
-          </td>
-        </tr>
-      `;
-      return;
+    function crearBadgeEstado(rendicion) {
+      const estados = {
+        AUTORIZADA: ["bg-success", "Autorizada"],
+        AUTORIZADA_PARCIAL: ["bg-primary", "Autorizada parcialmente"],
+        RECHAZADA: ["bg-danger", "Rechazada"],
+        PENDIENTE: ["bg-warning text-dark", "Pendiente"]
+      };
+      const configuracion = estados[obtenerEstadoRendicion(rendicion)] || estados.PENDIENTE;
+      return `<span class="badge ${configuracion[0]}">${configuracion[1]}</span>`;
     }
 
-    tabla.innerHTML = lista
-      .map((rendicion) => {
+    const rendicionesOrdenadas = ordenarPorFechaDescendente(rendiciones);
+
+    function renderizar(lista) {
+      if (!lista.length) {
+        mostrarMensaje("No se encontraron rendiciones.");
+        return;
+      }
+
+      tabla.innerHTML = lista.map((rendicion) => {
         const id = String(rendicion.ID || "").trim();
-        const fechaRendicion = formatearFecha(rendicion.procesado_en);
-
         return `
           <tr>
-            <td>
-              <strong>${escaparHTML(id || "-")}</strong>
-            </td>
-
-            <td>${escaparHTML(fechaRendicion)}</td>
-
-            <td>
-              ${escaparHTML(rendicion.colaborador || "-")}
-            </td>
-
-            <td>
-              ${escaparHTML(rendicion.numero_viaje || "-")}
-            </td>
-
-            <td>
-              ${Number(rendicion.cantidad_documentos) || 0}
-            </td>
-
+            <td><strong>${escaparHTML(id || "-")}</strong></td>
+            <td>${escaparHTML(formatearFecha(rendicion.procesado_en))}</td>
+            <td>${escaparHTML(rendicion.colaborador || "-")}</td>
+            <td>${escaparHTML(rendicion.empresa || "-")}</td>
+            <td>${escaparHTML(rendicion.numero_viaje || "-")}</td>
+            <td>${Number(rendicion.cantidad_documentos) || 0}</td>
             <td>${crearBadgeEstado(rendicion)}</td>
-
             <td class="text-center">
-              <button
-                type="button"
-                class="btn btn-sm btn-primary btn-ver-rendicion"
-                data-id="${escaparHTML(id)}"
-              >
-                <i class="bi bi-eye"></i>
-                Ver
+              <button type="button" class="btn btn-sm btn-primary btn-ver-rendicion" data-id="${escaparHTML(id)}">
+                <i class="bi bi-eye"></i> Ver
               </button>
             </td>
-          </tr>
-        `;
-      })
-      .join("");
+          </tr>`;
+      }).join("");
 
-    tabla
-      .querySelectorAll(".btn-ver-rendicion")
-      .forEach((boton) => {
-        boton.addEventListener("click", () => {
-          verRendicion(boton.dataset.id);
-        });
+      tabla.querySelectorAll(".btn-ver-rendicion").forEach((boton) => {
+        boton.addEventListener("click", () => verRendicion(boton.dataset.id));
       });
-  }
+    }
 
-  renderizar(rendicionesOrdenadas);
+    renderizar(rendicionesOrdenadas);
 
-  // ======================================================
-  // BUSCADOR
-  // ======================================================
-
-  buscador.addEventListener("input", () => {
-    const texto = buscador.value.toLowerCase().trim();
-
-    const filtradas = rendicionesOrdenadas.filter((rendicion) => {
-      const id = String(rendicion.ID || "").toLowerCase();
-      const colaborador = String(rendicion.colaborador || "").toLowerCase();
-      const viaje = String(rendicion.numero_viaje || "").toLowerCase();
-      const fecha = formatearFecha(rendicion.procesado_en).toLowerCase();
-      const estado = obtenerEstadoRendicion(rendicion).toLowerCase();
-
-      return (
-        id.includes(texto) ||
-        colaborador.includes(texto) ||
-        viaje.includes(texto) ||
-        fecha.includes(texto) ||
-        estado.includes(texto)
-      );
+    buscador.addEventListener("input", () => {
+      const texto = buscador.value.toLowerCase().trim();
+      const filtradas = rendicionesOrdenadas.filter((rendicion) => [
+        rendicion.ID,
+        rendicion.colaborador,
+        rendicion.empresa,
+        rendicion.numero_viaje,
+        formatearFecha(rendicion.procesado_en),
+        obtenerEstadoRendicion(rendicion)
+      ].some((campo) => String(campo || "").toLowerCase().includes(texto)));
+      renderizar(filtradas);
     });
-
-    renderizar(filtradas);
-  });
+  } catch (error) {
+    console.error("Error cargando rendiciones:", error);
+    totalRendiciones.textContent = "Error";
+    mostrarMensaje(error.message || "Error al cargar las rendiciones.", "text-danger");
+  }
 });
 
-
-// ======================================================
-// ABRIR DETALLE
-// ======================================================
-
 function verRendicion(id) {
-  if (!id) {
-    return;
-  }
-
-  window.location.href =
-    `detalle-rendicion.html?id=${encodeURIComponent(id)}`;
+  if (!id) return;
+  window.location.href = `detalle-rendicion.html?id=${encodeURIComponent(id)}`;
 }
-
-
-// ======================================================
-// SEGURIDAD DE TEXTO
-// ======================================================
 
 function escaparHTML(valor) {
   return String(valor)

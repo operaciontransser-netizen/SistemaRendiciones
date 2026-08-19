@@ -25,9 +25,15 @@
 
     <!-- MENÚ LATERAL -->
     <nav class="sidebar">
-      <h3 class="logo">
-        <i class="bi bi-receipt"></i>
-        Rendiciones
+      <h3 class="logo text-center">
+        <img
+          src="../assets/img/logo-integra.png"
+          alt="Empresas Integra"
+          style="display: block; width: 170px; max-width: 100%; max-height: 72px; object-fit: contain; margin: 0 auto 10px; padding: 5px; background: #ffffff; border-radius: 4px;"
+        >
+        <span style="display: block;">
+          Rendiciones
+        </span>
       </h3>
 
       <ul>
@@ -113,6 +119,13 @@
               <input type="date" id="filtroFechaHasta" class="form-control" />
             </div>
 
+            <div id="contenedorFiltroEmpresa" class="col-md-3 d-none">
+              <label for="filtroEmpresa" class="form-label">Empresa</label>
+              <select id="filtroEmpresa" class="form-select">
+                <option value="">Todas las empresas</option>
+              </select>
+            </div>
+
             <div class="col-md-3">
               <label for="filtroColaborador" class="form-label">
                 Colaborador
@@ -128,6 +141,8 @@
                 <option value="">Todos</option>
                 <option value="PENDIENTE">Pendiente</option>
                 <option value="AUTORIZADA">Autorizada</option>
+                <option value="AUTORIZADA_PARCIAL">Autorizada parcialmente</option>
+                <option value="RECHAZADA">Rechazada</option>
               </select>
             </div>
 
@@ -147,35 +162,56 @@
 
       <!-- RESUMEN EJECUTIVO -->
       <div class="row g-3 mb-4">
-        <div class="col-md-4 col-xl">
+        <div class="col-sm-6 col-lg-3">
           <div class="card h-100 text-center p-3">
             <small class="text-muted">Depositado</small>
             <h4 id="reporteDepositado" class="mb-0">$0</h4>
           </div>
         </div>
 
-        <div class="col-md-4 col-xl">
+        <div class="col-sm-6 col-lg-3">
           <div class="card h-100 text-center p-3">
-            <small class="text-muted">Rendido</small>
-            <h4 id="reporteRendido" class="mb-0">$0</h4>
+            <small class="text-muted">Presentado</small>
+            <h4 id="reportePresentado" class="mb-0">$0</h4>
           </div>
         </div>
 
-        <div class="col-md-4 col-xl">
+        <div class="col-sm-6 col-lg-3">
+          <div class="card h-100 text-center p-3">
+            <small class="text-muted">Autorizado</small>
+            <h4 id="reporteAutorizado" class="mb-0">$0</h4>
+          </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
+          <div class="card h-100 text-center p-3">
+            <small class="text-muted">Pendiente de revisión</small>
+            <h4 id="reportePendienteRevision" class="mb-0">$0</h4>
+          </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
+          <div class="card h-100 text-center p-3">
+            <small class="text-muted">Rechazado</small>
+            <h4 id="reporteRechazado" class="mb-0">$0</h4>
+          </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
           <div class="card h-100 text-center p-3">
             <small class="text-muted">Por rendir</small>
             <h4 id="reportePorRendir" class="mb-0">$0</h4>
           </div>
         </div>
 
-        <div class="col-md-4 col-xl">
+        <div class="col-sm-6 col-lg-3">
           <div class="card h-100 text-center p-3">
             <small class="text-muted">A favor colaboradores</small>
             <h4 id="reporteSaldoFavor" class="mb-0">$0</h4>
           </div>
         </div>
 
-        <div class="col-md-4 col-xl">
+        <div class="col-sm-6 col-lg-3">
           <div class="card h-100 text-center p-3">
             <small class="text-muted">Rendiciones</small>
             <h4 id="reporteCantidadRendiciones" class="mb-0">0</h4>
@@ -197,6 +233,20 @@
                 role="tab"
               >
                 Resumen
+              </button>
+            </li>
+
+            <li class="nav-item" role="presentation">
+              <button
+                class="nav-link"
+                id="rechazados-tab"
+                data-bs-toggle="tab"
+                data-bs-target="#reporteRechazados"
+                type="button"
+                role="tab"
+              >
+                Comprobantes rechazados
+                <span id="cantidadRechazadosTab" class="badge bg-danger ms-1">0</span>
               </button>
             </li>
 
@@ -263,14 +313,17 @@
                       <th>Colaborador</th>
                       <th>Centro de costo</th>
                       <th class="text-end">Asignado</th>
-                      <th class="text-end">Rendido</th>
+                      <th class="text-end">Presentado</th>
+                      <th class="text-end">Autorizado</th>
+                      <th class="text-end">Pendiente</th>
+                      <th class="text-end">Rechazado</th>
                       <th class="text-end">Saldo</th>
                       <th>Última rendición</th>
                     </tr>
                   </thead>
                   <tbody id="tablaReporteSaldos">
                     <tr>
-                      <td colspan="6" class="text-center text-muted">
+                      <td colspan="9" class="text-center text-muted">
                         Cargando saldos...
                       </td>
                     </tr>
@@ -304,6 +357,47 @@
               </div>
             </div>
 
+            <div class="tab-pane fade" id="reporteRechazados" role="tabpanel">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                  <h5 class="mb-1">Comprobantes no autorizados</h5>
+                  <p class="text-muted mb-0">
+                    Registro de auditoría con motivo, responsable y respaldo original.
+                  </p>
+                </div>
+                <div class="text-end">
+                  <small class="text-muted d-block">Monto rechazado filtrado</small>
+                  <strong id="totalRechazadosFiltrados" class="text-danger">$0</strong>
+                </div>
+              </div>
+
+              <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                  <thead>
+                    <tr>
+                      <th>Fecha revisión</th>
+                      <th>Rendición</th>
+                      <th>Colaborador</th>
+                      <th>Empresa</th>
+                      <th>Documento</th>
+                      <th>Proveedor</th>
+                      <th class="text-end">Monto</th>
+                      <th>Motivo</th>
+                      <th>Revisado por</th>
+                      <th class="text-center">Respaldo</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tablaReporteRechazados">
+                    <tr>
+                      <td colspan="10" class="text-center text-muted">
+                        Cargando comprobantes rechazados...
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
@@ -319,7 +413,7 @@
 
         <div class="card-body">
           <p class="text-muted">
-            La exportación respetará el rango de fechas y los filtros aplicados.
+            La exportación respetará los filtros y la pestaña activa.
           </p>
 
           <div class="d-flex flex-wrap gap-2">
@@ -346,8 +440,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
   <script src="../assets/js/googleSheets.js"></script>
-    <script src="../assets/js/reportes.js"></script>
-  <!-- reportes.js se agregará después de definir y verificar la respuesta de la API. -->
+  <script src="../assets/js/reportes.js"></script>
 
   <script>
     document.addEventListener("DOMContentLoaded", function () {
