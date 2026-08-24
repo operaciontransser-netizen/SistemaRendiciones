@@ -85,3 +85,37 @@ body{
     font-size:34px;
     font-weight:bold;
 }
+
+
+/* =========================
+   IDENTIDAD Y ABONOS
+========================= */
+
+.logo-empresa-menu{
+    display:block;
+    width:170px;
+    max-width:100%;
+    max-height:72px;
+    object-fit:contain;
+    margin:0 auto 10px;
+    padding:5px;
+    background:#ffffff;
+    border-radius:4px;
+}
+
+.selector-empresa-abonos{
+    min-width:230px;
+}
+
+#tablaAbonos td,
+#tablaCartola td{
+    vertical-align:middle;
+}
+
+@media (max-width: 991px){
+    .topbar{
+        align-items:flex-start;
+        gap:16px;
+        flex-wrap:wrap;
+    }
+}

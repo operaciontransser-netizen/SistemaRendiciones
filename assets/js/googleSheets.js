@@ -309,3 +309,90 @@ async function autorizarRendicionGoogleSheets(
     id: id
   });
 }
+
+
+// ======================================================
+// FONDOS Y ABONOS
+// ======================================================
+
+async function obtenerAbonosGoogleSheets(
+  filtros = {}
+) {
+  return await solicitarAppsScript({
+    accion: "listar_abonos",
+    rut: filtros.rut || "",
+    estado: filtros.estado || ""
+  });
+}
+
+
+async function registrarAbonoGoogleSheets(
+  datos = {}
+) {
+  const usuario = obtenerUsuarioActual();
+  const rol = normalizarRolUsuario(
+    usuario && usuario.rol
+  );
+
+  if (
+    rol !== "ADMIN" &&
+    rol !== "SUPER ADMIN"
+  ) {
+    throw new Error(
+      "Solo el Jefe de Área o Super Administrador puede registrar abonos."
+    );
+  }
+
+  return await solicitarAppsScript({
+    accion: "registrar_abono",
+    rut: datos.rut || "",
+    fecha: datos.fecha || "",
+    monto: datos.monto || "",
+    medio_pago: datos.medio_pago || "",
+    referencia: datos.referencia || "",
+    observacion: datos.observacion || "",
+    comprobante_url: datos.comprobante_url || ""
+  });
+}
+
+
+async function anularAbonoGoogleSheets(
+  idAbono,
+  motivo
+) {
+  const usuario = obtenerUsuarioActual();
+  const rol = normalizarRolUsuario(
+    usuario && usuario.rol
+  );
+
+  if (
+    rol !== "ADMIN" &&
+    rol !== "SUPER ADMIN"
+  ) {
+    throw new Error(
+      "Solo el Jefe de Área o Super Administrador puede anular abonos."
+    );
+  }
+
+  return await solicitarAppsScript({
+    accion: "anular_abono",
+    id_abono: idAbono || "",
+    motivo: motivo || ""
+  });
+}
+
+
+async function obtenerCartolaGoogleSheets(
+  rut
+) {
+  if (!rut) {
+    throw new Error(
+      "Debe seleccionar un colaborador."
+    );
+  }
+
+  return await solicitarAppsScript({
+    accion: "obtener_cartola",
+    rut: rut
+  });
+}
