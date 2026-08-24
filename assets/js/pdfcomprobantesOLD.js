@@ -81,54 +81,12 @@ async function generarPDFCompleto() {
         detalle.autorizado_en
       );
 
-    // ======================================================
-    // DATOS FINANCIEROS
-    // La CARTOLA del colaborador es la fuente principal,
-    // igual que en el archivo PDF que ya entregaba el saldo correcto.
-    // Los campos de la rendición quedan sólo como respaldo.
-    // ======================================================
-
-    let montoAsignado =
+    const montoAsignado =
       Number(detalle.monto_asignado || 0);
 
-    let saldo =
+    const saldo =
       Number(detalle.saldo_2 || 0);
 
-    try {
-      if (
-        typeof obtenerCartolaGoogleSheets === "function" &&
-        rut &&
-        rut !== "-"
-      ) {
-        const cartola =
-          await obtenerCartolaGoogleSheets(rut);
-
-        if (cartola && !cartola.error) {
-          const totalAbonos =
-            Number(cartola.total_abonos || 0);
-
-          const saldoActual =
-            Number(cartola.saldo_actual || 0);
-
-          if (Number.isFinite(totalAbonos)) {
-            montoAsignado = totalAbonos;
-          }
-
-          if (Number.isFinite(saldoActual)) {
-            saldo = saldoActual;
-          }
-        }
-      }
-    } catch (error) {
-      console.warn(
-        "No fue posible obtener la cartola para el PDF. Se utilizarán los valores de respaldo.",
-        error
-      );
-    }
-
-    // Regla usada por el sistema:
-    // saldo positivo = saldo a favor de la empresa
-    // saldo negativo = saldo a favor del trabajador
     const saldoEmpresa =
       saldo > 0
         ? saldo
