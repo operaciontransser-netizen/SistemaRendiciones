@@ -2117,24 +2117,7 @@ function claseEstadoRendicionPDF(estado) {
 // ==========================================================
 
 function obtenerURLAppsScriptPDF() {
-  // Usar exactamente la misma API que utiliza el resto del sistema.
-  // Así el PDF no queda apuntando a una implementación antigua.
-  try {
-    if (
-      typeof GOOGLE_SHEETS_API !== "undefined" &&
-      GOOGLE_SHEETS_API
-    ) {
-      return String(GOOGLE_SHEETS_API).trim();
-    }
-  } catch (error) {
-    console.warn(
-      "No fue posible leer GOOGLE_SHEETS_API:",
-      error
-    );
-  }
-
-  // Respaldo: implementación actualmente utilizada por el sistema.
-  return "https://script.google.com/macros/s/AKfycbxakaKu-ysq3IvTl30y0JNJsoYk93h2J2hu-9WfumprQnP_Z6XU_eBwhz3E4YD7TUgEvA/exec";
+  return "https://script.google.com/macros/s/AKfycbxmTVcAquO3EQZvXQg2DzxRBfP4KCJ6cEqMv3pHFaeaM0z01rYiuuV3sXHupizB-hwakg/exec";
 }
  
 
