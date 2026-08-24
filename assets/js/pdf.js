@@ -1,4 +1,4 @@
-function generarPDF() {
+async function generarPDF() {
   const folio =
     document.getElementById("detalleFolio")?.textContent.trim() || "-";
 
@@ -49,17 +49,83 @@ function generarPDF() {
       detalle.autorizado_en
     );
 
-  const montoAsignado = Number(detalle.monto_asignado || 0);
+// ======================================================
+// DATOS FINANCIEROS
+// Usa la misma cartola que el módulo Fondos y Abonos.
+// Esta pasa a ser la fuente oficial del saldo.
+// ======================================================
 
-  // En Google Sheets la columna se llama SALDO 2.
-  // En el sistema lo tratamos simplemente como saldo.
-  const saldo = Number(detalle.saldo_2 || 0);
+let montoAsignado =
+  Number(detalle.monto_asignado || 0);
 
-  // Regla:
-  // saldo positivo = saldo a favor empresa
-  // saldo negativo = saldo a favor trabajador
-  const saldoEmpresa = saldo > 0 ? saldo : 0;
-  const saldoTrabajador = saldo < 0 ? Math.abs(saldo) : 0;
+let saldo =
+  Number(detalle.saldo_2 || 0);
+
+let totalAbonosCartola = 0;
+let totalRendidoCartola = 0;
+
+try {
+
+  if (
+    typeof obtenerCartolaGoogleSheets === "function" &&
+    rut &&
+    rut !== "-"
+  ) {
+
+    const cartola =
+      await obtenerCartolaGoogleSheets(rut);
+
+    if (
+      cartola &&
+      !cartola.error
+    ) {
+
+      totalAbonosCartola =
+        Number(cartola.total_abonos || 0);
+
+      totalRendidoCartola =
+        Number(cartola.total_rendido || 0);
+
+      saldo =
+        Number(cartola.saldo_actual || 0);
+
+      // Usamos los abonos reales como monto disponible/asignado.
+      // Si no existe información en la cartola,
+      // conservamos el valor antiguo como respaldo.
+      if (Number.isFinite(totalAbonosCartola)) {
+        montoAsignado = totalAbonosCartola;
+      }
+
+    }
+
+  }
+
+} catch (error) {
+
+  console.warn(
+    "No fue posible obtener la cartola para el PDF. Se usará el saldo de respaldo:",
+    error
+  );
+
+}
+
+
+// ======================================================
+// DISTRIBUCIÓN DEL SALDO
+// ======================================================
+
+// saldo positivo = dinero pendiente de rendir / a favor empresa
+// saldo negativo = diferencia a favor trabajador
+
+const saldoEmpresa =
+  saldo > 0
+    ? saldo
+    : 0;
+
+const saldoTrabajador =
+  saldo < 0
+    ? Math.abs(saldo)
+    : 0;
 
   const totalNumerico = convertirMontoPDF(totalTexto);
 
