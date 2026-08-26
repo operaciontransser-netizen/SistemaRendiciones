@@ -166,23 +166,49 @@ async function solicitarAppsScript(
     url
   );
 
-  const respuesta =
-    await fetch(
-      url,
-      {
-        method: "GET",
-        cache: "no-store"
-      }
+  let datos;
+
+  try {
+    const respuesta =
+      await fetch(
+        url,
+        {
+          method: "GET",
+          cache: "no-store"
+        }
+      );
+
+    if (!respuesta.ok) {
+      throw new Error(
+        `Error HTTP: ${respuesta.status}`
+      );
+    }
+
+    datos =
+      await respuesta.json();
+
+  } catch (error) {
+    // Algunos despliegues de Apps Script responden mediante una redirección
+    // que el navegador bloquea por CORS cuando el frontend se ejecuta
+    // desde localhost/127.0.0.1. En ese caso usamos JSONP como transporte
+    // de compatibilidad, sin cambiar los parámetros ni la lógica del backend.
+    const esErrorRed =
+      error instanceof TypeError ||
+      /failed to fetch|networkerror|load failed/i.test(
+        String(error && error.message || error || "")
+      );
+
+    if (!esErrorRed) {
+      throw error;
+    }
+
+    console.warn(
+      "Fetch bloqueado o no disponible; reintentando Apps Script mediante JSONP.",
+      error
     );
 
-  if (!respuesta.ok) {
-    throw new Error(
-      `Error HTTP: ${respuesta.status}`
-    );
+    datos = await solicitarAppsScriptJSONP(url);
   }
-
-  const datos =
-    await respuesta.json();
 
   console.log(
     "Respuesta Apps Script:",
@@ -197,6 +223,155 @@ async function solicitarAppsScript(
       datos.error
     );
   }
+
+  return datos;
+}
+
+
+// ======================================================
+// TRANSPORTE JSONP DE COMPATIBILIDAD PARA APPS SCRIPT
+// ======================================================
+
+function solicitarAppsScriptJSONP(
+  url,
+  timeoutMs = 30000
+) {
+  return new Promise((resolve, reject) => {
+    const callbackName =
+      `__srJsonp_${Date.now()}_${Math.random()
+        .toString(36)
+        .slice(2)}`;
+
+    const script =
+      document.createElement("script");
+
+    let finalizado = false;
+
+    const limpiar = () => {
+      if (finalizado) {
+        return;
+      }
+
+      finalizado = true;
+      clearTimeout(temporizador);
+      script.remove();
+
+      try {
+        delete window[callbackName];
+      } catch (error) {
+        window[callbackName] = undefined;
+      }
+    };
+
+    window[callbackName] = (datos) => {
+      limpiar();
+      resolve(datos);
+    };
+
+    script.onerror = () => {
+      limpiar();
+      reject(
+        new Error(
+          "No fue posible cargar la respuesta de Apps Script mediante JSONP."
+        )
+      );
+    };
+
+    const separador =
+      url.includes("?") ? "&" : "?";
+
+    script.src =
+      `${url}${separador}callback=${encodeURIComponent(callbackName)}` +
+      `&_jsonp=${Date.now()}`;
+
+    script.async = true;
+
+    const temporizador = setTimeout(() => {
+      limpiar();
+      reject(
+        new Error(
+          "Tiempo de espera agotado consultando Apps Script."
+        )
+      );
+    }, timeoutMs);
+
+    document.head.appendChild(script);
+  });
+}
+
+
+// ======================================================
+// CACHE LOCAL DE CONSULTAS DE LECTURA
+// ======================================================
+// Solo se usa para mejorar la percepción de velocidad al volver a entrar
+// a un módulo. El Apps Script sigue siendo la fuente de verdad y las
+// operaciones de escritura no utilizan esta función.
+async function solicitarAppsScriptConCache(
+  parametrosAdicionales = {},
+  clave = "consulta",
+  maxEdadMs = 15000
+) {
+  const usuario = obtenerUsuarioActual();
+  if (!usuario) {
+    throw new Error("No existe un usuario autenticado.");
+  }
+
+  const empresa = obtenerEmpresaSeleccionada();
+  const identidad = [
+    usuario.email,
+    normalizarRolUsuario(usuario.rol),
+    empresa,
+    clave,
+    JSON.stringify(parametrosAdicionales || {})
+  ].join("|");
+
+  let cacheKey = "SR_CACHE_";
+  try {
+    const bytes = new TextEncoder().encode(identidad);
+    let binario = "";
+    bytes.forEach((b) => { binario += String.fromCharCode(b); });
+    cacheKey += btoa(binario).replace(/[^a-zA-Z0-9]/g, "").slice(0, 120);
+  } catch (error) {
+    cacheKey += encodeURIComponent(identidad).slice(0, 120);
+  }
+
+  let cacheLocal = null;
+  try {
+    cacheLocal = JSON.parse(
+      sessionStorage.getItem(cacheKey) || "null"
+    );
+  } catch (error) {
+    cacheLocal = null;
+  }
+
+  const edad = cacheLocal && Number(cacheLocal.enviadoEn)
+    ? Date.now() - Number(cacheLocal.enviadoEn)
+    : Number.POSITIVE_INFINITY;
+
+  if (cacheLocal && edad >= 0 && edad <= maxEdadMs) {
+    // Refresca en segundo plano para no bloquear la navegación.
+    solicitarAppsScript(parametrosAdicionales)
+      .then((datos) => {
+        try {
+          sessionStorage.setItem(
+            cacheKey,
+            JSON.stringify({ enviadoEn: Date.now(), datos })
+          );
+        } catch (error) {}
+      })
+      .catch(() => {});
+
+    return cacheLocal.datos;
+  }
+
+  const datos = await solicitarAppsScript(parametrosAdicionales);
+
+  try {
+    sessionStorage.setItem(
+      cacheKey,
+      JSON.stringify({ enviadoEn: Date.now(), datos })
+    );
+  } catch (error) {}
 
   return datos;
 }

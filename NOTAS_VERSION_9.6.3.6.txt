@@ -1,0 +1,10 @@
+VERSION 9.6.3.6
+
+Cambios exclusivos de esta version:
+- Listado de Rendiciones: Centro de Costos reemplaza visualmente a Viaje.
+- Listado de Rendiciones: se agrega Monto total de la rendicion.
+- Eliminacion: el boton sigue visible solo para SUPER ADMIN y el backend valida nuevamente el rol.
+- Eliminacion: se registra el evento en AUDITORIA_RENDICIONES.
+- Historial de duplicados: se conserva COMPROBANTES_DUPLICADOS y las rendiciones SOLO_DUPLICADOS siguen apareciendo.
+
+Se conserva la estructura existente y la carpeta .git del proyecto original.

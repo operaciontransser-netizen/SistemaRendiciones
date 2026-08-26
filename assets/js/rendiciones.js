@@ -13,11 +13,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function mostrarMensaje(mensaje, clase = "text-muted") {
-    tabla.innerHTML = `<tr><td colspan="8" class="text-center ${clase}">${escaparHTML(mensaje)}</td></tr>`;
+    tabla.innerHTML = `<tr><td colspan="9" class="text-center ${clase}">${escaparHTML(mensaje)}</td></tr>`;
   }
 
   tabla.innerHTML = `
-    <tr><td colspan="8" class="text-center text-muted">
+    <tr><td colspan="9" class="text-center text-muted">
       <div class="spinner-border spinner-border-sm me-2" role="status"></div>
       Cargando rendiciones...
     </td></tr>`;
@@ -31,11 +31,20 @@ document.addEventListener("DOMContentLoaded", async () => {
   const rol = String(usuario.rol || "").trim().toUpperCase();
   const esSuperAdmin = rol === "SUPER ADMIN";
   let empresaActiva = "";
+  let rendicionesIniciales = null;
 
   try {
     if (esSuperAdmin && selectorEmpresa && contenedorEmpresa) {
-      const empresas = await solicitarAppsScript({ empresas: "1" });
+      // Las empresas y el listado son consultas independientes: se solicitan
+      // en paralelo para reducir el tiempo de apertura del módulo.
+      const [empresas, listadoInicial] = await Promise.all([
+        solicitarAppsScriptConCache({ empresas: "1" }, "empresas", 30000),
+        solicitarAppsScriptConCache({}, "rendiciones", 15000)
+      ]);
+      rendicionesIniciales = listadoInicial;
+
       if (!Array.isArray(empresas)) throw new Error("No fue posible obtener las empresas.");
+      if (!Array.isArray(rendicionesIniciales)) throw new Error("La API no devolvió un listado válido.");
 
       selectorEmpresa.innerHTML = `
         <option value="">Todas las empresas</option>
@@ -63,7 +72,19 @@ document.addEventListener("DOMContentLoaded", async () => {
       localStorage.removeItem("empresaSeleccionada");
     }
 
-    const rendiciones = await solicitarAppsScript(empresaActiva ? { empresa: empresaActiva } : {});
+    const rendiciones = (esSuperAdmin && selectorEmpresa && contenedorEmpresa)
+      ? (empresaActiva
+          ? await solicitarAppsScriptConCache(
+              { empresa: empresaActiva },
+              "rendiciones",
+              15000
+            )
+          : rendicionesIniciales)
+      : await solicitarAppsScriptConCache(
+          empresaActiva ? { empresa: empresaActiva } : {},
+          "rendiciones",
+          15000
+        );
     console.log("Rendiciones recibidas:", rendiciones);
     if (!Array.isArray(rendiciones)) throw new Error("La API no devolvió un listado válido.");
 
@@ -129,6 +150,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       tabla.innerHTML = lista.map((rendicion) => {
         const id = String(rendicion.ID || "").trim();
+        
+        // ADICIÓN 1: Crear botón de borrar condicional para Super Admin
+        const botonBorrar = esSuperAdmin 
+          ? `<button type="button" class="btn btn-sm btn-danger btn-borrar-rendicion ms-1" data-id="${escaparHTML(id)}">
+               <i class="bi bi-trash"></i> Borrar
+             </button>`
+          : "";
+
         return `
           <tr>
             <td><strong>${escaparHTML(id || "-")}</strong></td>
@@ -136,18 +165,25 @@ document.addEventListener("DOMContentLoaded", async () => {
             <td>${escaparHTML(rendicion.colaborador || "-")}</td>
             <td>${escaparHTML(rendicion.empresa || "-")}</td>
             <td>${escaparHTML(rendicion.numero_viaje || "-")}</td>
+            <td>${formatearMonto(rendicion.monto_total)}</td>
             <td>${Number(rendicion.cantidad_documentos) || 0}</td>
             <td>${crearBadgeEstado(rendicion)}</td>
             <td class="text-center">
               <button type="button" class="btn btn-sm btn-primary btn-ver-rendicion" data-id="${escaparHTML(id)}">
                 <i class="bi bi-eye"></i> Ver
               </button>
+              ${botonBorrar}
             </td>
           </tr>`;
       }).join("");
 
       tabla.querySelectorAll(".btn-ver-rendicion").forEach((boton) => {
         boton.addEventListener("click", () => verRendicion(boton.dataset.id));
+      });
+
+      // ADICIÓN 2: Escuchar el evento click en los nuevos botones de borrar
+      tabla.querySelectorAll(".btn-borrar-rendicion").forEach((boton) => {
+        boton.addEventListener("click", () => eliminarRendicion(boton.dataset.id));
       });
     }
 
@@ -160,6 +196,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         rendicion.colaborador,
         rendicion.empresa,
         rendicion.numero_viaje,
+        rendicion.monto_total,
         formatearFecha(rendicion.procesado_en),
         obtenerEstadoRendicion(rendicion)
       ].some((campo) => String(campo || "").toLowerCase().includes(texto)));
@@ -177,11 +214,39 @@ function verRendicion(id) {
   window.location.href = `detalle-rendicion.html?id=${encodeURIComponent(id)}`;
 }
 
+// ADICIÓN 3: Nueva función para enviar la orden de borrado a Apps Script
+async function eliminarRendicion(id) {
+  if (!id) return;
+
+  const confirmar = confirm(`¿Estás seguro de que deseas eliminar la rendición con ID: ${id}? Esta acción no se puede deshacer.`);
+  if (!confirmar) return;
+
+  try {
+    const respuesta = await solicitarAppsScript({ accion: "eliminarRendicion", id: id });
+    
+    if (respuesta && respuesta.success) {
+      alert("Rendición eliminada exitosamente.");
+      window.location.reload();
+    } else {
+      throw new Error(respuesta.error || "No se pudo eliminar la rendición.");
+    }
+  } catch (error) {
+    console.error("Error al eliminar la rendición:", error);
+    alert(`Error: ${error.message}`);
+  }
+}
+
+function formatearMonto(valor) {
+  const monto = Number(valor || 0);
+  if (!Number.isFinite(monto)) return "$0";
+  return monto.toLocaleString("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 });
+}
+
 function escaparHTML(valor) {
   return String(valor)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+    .replace(/'/g, "'");
 }

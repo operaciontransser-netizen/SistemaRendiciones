@@ -98,6 +98,12 @@
             </li>
 
 
+
+            <li data-superadmin-only style="display:none" onclick="location.href='pages/monitor.html'">
+                <i class="bi bi-activity"></i>
+                Monitor del Sistema
+            </li>
+
             <li>
                 <i class="bi bi-gear"></i>
                 Configuración
@@ -1040,8 +1046,42 @@
                         const urlResumen =
                             `${GOOGLE_SHEETS_API}?${parametros.toString()}`;
 
+                        const cacheKey =
+                            `dashboard_resumen_${usuario.email}_${empresaActiva || "todas"}`;
+
+                        try {
+                            const cacheado =
+                                JSON.parse(
+                                    sessionStorage.getItem(cacheKey) || "null"
+                                );
+
+                            if (
+                                cacheado &&
+                                Number(cacheado.enviadoEn) &&
+                                Date.now() - Number(cacheado.enviadoEn) <= 15000 &&
+                                cacheado.datos
+                            ) {
+                                fetch(urlResumen, { cache: "no-store" })
+                                    .then((respuesta) => {
+                                        if (!respuesta.ok) return null;
+                                        return respuesta.json();
+                                    })
+                                    .then((datos) => {
+                                        if (datos) {
+                                            sessionStorage.setItem(
+                                                cacheKey,
+                                                JSON.stringify({ enviadoEn: Date.now(), datos })
+                                            );
+                                        }
+                                    })
+                                    .catch(() => {});
+
+                                return cacheado.datos;
+                            }
+                        } catch (error) {}
+
                         const respuestaResumen =
-                            await fetch(urlResumen);
+                            await fetch(urlResumen, { cache: "no-store" });
 
                         if (!respuestaResumen.ok) {
                             throw new Error(
@@ -1049,7 +1089,16 @@
                             );
                         }
 
-                        return await respuestaResumen.json();
+                        const datos = await respuestaResumen.json();
+
+                        try {
+                            sessionStorage.setItem(
+                                cacheKey,
+                                JSON.stringify({ enviadoEn: Date.now(), datos })
+                            );
+                        } catch (error) {}
+
+                        return datos;
 
                     }
 
@@ -1593,6 +1642,7 @@
     </script>
 
 
+  <script src="assets/js/superadminMenu.js"></script>
 </body>
 
 </html>

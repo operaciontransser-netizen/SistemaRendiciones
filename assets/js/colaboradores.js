@@ -32,9 +32,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   `;
 
   try {
-    const colaboradores = await solicitarAppsScript({
-      colaboradores: "1"
-    });
+    const colaboradores = await solicitarAppsScriptConCache(
+      { colaboradores: "1" },
+      "colaboradores",
+      15000
+    );
 
     if (!Array.isArray(colaboradores)) {
       throw new Error("Apps Script no devolvió un listado válido de colaboradores.");
