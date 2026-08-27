@@ -34,13 +34,9 @@ function listFiles() {
     return gitFiles(["diff", "--cached", "--name-only", "--diff-filter=ACMR"]);
   }
 
-  try {
-    const tracked = gitFiles(["ls-files"]);
-    const untracked = gitFiles(["ls-files", "--others", "--exclude-standard"]);
-    return [...new Set([...tracked, ...untracked])];
-  } catch {
-    return [];
-  }
+  const tracked = gitFiles(["ls-files"]);
+  const untracked = gitFiles(["ls-files", "--others", "--exclude-standard"]);
+  return [...new Set([...tracked, ...untracked])];
 }
 
 const findings = [];

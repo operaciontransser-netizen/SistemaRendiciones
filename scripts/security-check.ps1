@@ -24,11 +24,13 @@ $secretPatterns = [ordered]@{
 
 if ($Staged) {
   $files = @(git -C $repo diff --cached --name-only --diff-filter=ACMR)
+  if ($LASTEXITCODE -ne 0) { throw "Git no pudo leer los archivos preparados." }
 } else {
-  $files = @(
-    git -C $repo ls-files
-    git -C $repo ls-files --others --exclude-standard
-  ) | Sort-Object -Unique
+  $tracked = @(git -C $repo ls-files)
+  if ($LASTEXITCODE -ne 0) { throw "Git no pudo leer los archivos rastreados." }
+  $untracked = @(git -C $repo ls-files --others --exclude-standard)
+  if ($LASTEXITCODE -ne 0) { throw "Git no pudo leer los archivos locales." }
+  $files = @($tracked + $untracked) | Sort-Object -Unique
 }
 
 $findings = [System.Collections.Generic.List[string]]::new()
