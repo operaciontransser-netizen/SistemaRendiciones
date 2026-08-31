@@ -252,7 +252,9 @@ async function generarPDFCompleto() {
 
             if (datosFoto.dataUrl) {
               fotoBase64 =
-                datosFoto.dataUrl;
+                await optimizarFotografiaParaPDF(
+                  datosFoto.dataUrl
+                );
             } else {
               errorFoto =
                 datosFoto.error ||
@@ -1341,6 +1343,7 @@ async function generarPDFCompleto() {
             }
 
 }
+
 
         </style>
 
@@ -2472,4 +2475,78 @@ function formatearFechaHoraComprobantes(
 
   return texto;
 
+}
+
+
+// ==========================================================
+// OPTIMIZACIÓN DE FOTOGRAFÍAS PARA EL PDF
+// Conserva intacto el archivo original de Drive. Solamente
+// reduce la copia temporal que el navegador envía a imprimir.
+// ==========================================================
+
+async function optimizarFotografiaParaPDF(
+  dataUrl,
+  ladoMaximo = 1800,
+  calidadJPEG = 0.78
+) {
+  const origen = String(dataUrl || "");
+
+  if (!origen.startsWith("data:image/")) {
+    return origen;
+  }
+
+  try {
+    const imagen = await new Promise(
+      (resolve, reject) => {
+        const elemento = new Image();
+        elemento.onload = () => resolve(elemento);
+        elemento.onerror = () => reject(
+          new Error("No fue posible decodificar la fotografía.")
+        );
+        elemento.src = origen;
+      }
+    );
+
+    const anchoOriginal = Number(
+      imagen.naturalWidth || imagen.width || 0
+    );
+    const altoOriginal = Number(
+      imagen.naturalHeight || imagen.height || 0
+    );
+
+    if (!anchoOriginal || !altoOriginal) {
+      return origen;
+    }
+
+    const escala = Math.min(
+      1,
+      ladoMaximo / Math.max(anchoOriginal, altoOriginal)
+    );
+    const ancho = Math.max(1, Math.round(anchoOriginal * escala));
+    const alto = Math.max(1, Math.round(altoOriginal * escala));
+    const canvas = document.createElement("canvas");
+    canvas.width = ancho;
+    canvas.height = alto;
+
+    const contexto = canvas.getContext("2d", { alpha: false });
+    if (!contexto) {
+      return origen;
+    }
+
+    contexto.fillStyle = "#ffffff";
+    contexto.fillRect(0, 0, ancho, alto);
+    contexto.imageSmoothingEnabled = true;
+    contexto.imageSmoothingQuality = "high";
+    contexto.drawImage(imagen, 0, 0, ancho, alto);
+
+    const optimizada = canvas.toDataURL("image/jpeg", calidadJPEG);
+    return optimizada.length < origen.length ? optimizada : origen;
+
+  } catch (error) {
+    console.warn(
+      "No fue posible optimizar una fotografía para el PDF. Se utilizará el original.",
+      error
+    );
+    return origen;
+  }
 }
