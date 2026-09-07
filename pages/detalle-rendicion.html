@@ -33,20 +33,21 @@
         rel="stylesheet"
         href="../assets/css/style.css"
     >
+    <link rel="stylesheet" href="../assets/css/topnav-preview.css">
 
 </head>
 
 
-<body>
+<body class="dashboard-topnav-preview">
 
 
 <!-- =========================================
      MENÚ LATERAL
 ========================================= -->
 
-<nav class="sidebar">
+<nav class="sidebar topnav-preview">
 
-    <h3 class="logo text-center">
+    <h3 class="logo topnav-brand text-center">
 
         <img
             src="../assets/img/logo-integra.png"
@@ -61,7 +62,7 @@
     </h3>
 
 
-    <ul>
+    <ul class="topnav-links">
 
         <li onclick="location.href='../index.html'">
 
@@ -205,7 +206,7 @@
 
                 <!-- FOLIO -->
 
-                <div class="col-md-3 mb-3">
+                <div class="col-md-2 mb-3">
 
                     <small class="text-muted">
                         Folio
@@ -221,7 +222,7 @@
 
                 <!-- COLABORADOR -->
 
-                <div class="col-md-5 mb-3">
+                <div class="col-md-3 mb-3">
 
                     <small class="text-muted">
                         Colaborador
@@ -244,6 +245,22 @@
                     </small>
 
                     <h5 id="detalleViaje">
+                        -
+                    </h5>
+
+                </div>
+
+
+
+                <!-- CENTRO DE COSTO -->
+
+                <div class="col-md-3 mb-3">
+
+                    <small class="text-muted">
+                        Centro de costo
+                    </small>
+
+                    <h5 id="detalleCentroCosto">
                         -
                     </h5>
 
@@ -335,6 +352,10 @@
                                 Descripción
                             </th>
 
+                            <th>
+                                Centro de costo
+                            </th>
+
                             <th class="text-end">
                                 Monto
                             </th>
@@ -354,7 +375,7 @@
                         <tr>
 
                             <td
-                                colspan="7"
+                                colspan="10"
                                 class="text-center text-muted"
                             >
 
@@ -595,7 +616,7 @@
 <!-- DETALLE DE LA RENDICIÓN -->
 
   <script
-    src="../assets/js/detalleRendicion.js"
+    src="../assets/js/detalleRendicion.js?v=20260907-3"
   ></script>
 
   <!-- AUDITORÍA DE COMPROBANTES EXCLUIDOS POR DUPLICIDAD -->
@@ -607,18 +628,20 @@
 <!-- PDF ACTUAL -->
 
 <script
-    src="../assets/js/pdf.js"
+    src="../assets/js/pdf.js?v=20260907-1"
 ></script>
 
 
 <!-- PDF COMPLETO CON FOTOGRAFÍAS -->
 
 <script
-    src="../assets/js/pdfcomprobantes.js"
+    src="../assets/js/pdfcomprobantes.js?v=20260907-1"
 ></script>
 
 
   <script src="../assets/js/superadminMenu.js"></script>
+  <script src="../assets/js/authSeguro.js"></script>
+  <script src="../assets/js/topNavPreview.js?v=20260901-2"></script>
 </body>
 
 </html>

@@ -1,4 +1,8 @@
 async function generarPDF() {
+  if (esModoSeguroRendiciones()) {
+    alert("El PDF de rendición depende de la cartola antigua y está pendiente de migración. Utilice la exportación del informe gerencial PostgreSQL.");
+    return;
+  }
   const folio =
     document.getElementById("detalleFolio")?.textContent.trim() || "-";
 
@@ -26,7 +30,7 @@ async function generarPDF() {
   }
 
   const empresa = detalle.empresa || "TRANSSER";
-  const centroCosto = detalle.centro_costo || "-";
+  const centroCosto = detalle.centro_costo_nombre || detalle.centro_costo || detalle.centro_costo_codigo || document.getElementById("detalleCentroCosto")?.textContent.trim() || "-";
   const rut = detalle.rut || "-";
 
   const estadoRendicion = String(
@@ -147,14 +151,18 @@ const saldoTrabajador =
       const descripcion =
         celdas[4].textContent.trim() || "-";
 
+      const centroCostoDocumento =
+        celdas[5].textContent.trim() || centroCosto;
+
       const monto =
-        celdas[5].textContent.trim() || "$0";
+        celdas[6].textContent.trim() || "$0";
 
       return `
         <tr>
           <td>${fecha}</td>
           <td>${numeroDocumento}</td>
           <td>${descripcion}</td>
+          <td>${centroCostoDocumento}</td>
           <td class="monto">${monto}</td>
         </tr>
       `;
@@ -773,7 +781,8 @@ const saldoTrabajador =
             <tr>
               <th>FECHA</th>
               <th>N° DOCUMENTO</th>
-              <th>TIPO DE GASTO</th>
+              <th>DESCRIPCIÓN</th>
+              <th>CENTRO DE COSTO</th>
               <th>MONTO</th>
             </tr>
 

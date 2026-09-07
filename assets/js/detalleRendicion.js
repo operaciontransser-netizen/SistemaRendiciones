@@ -6,9 +6,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   const folio = document.getElementById("detalleFolio");
   const colaborador = document.getElementById("detalleColaborador");
   const viaje = document.getElementById("detalleViaje");
+  const centroCosto = document.getElementById("detalleCentroCosto");
   const total = document.getElementById("totalRendicion");
 
-  if (!tabla || !folio || !colaborador || !viaje || !total) {
+  if (!tabla || !folio || !colaborador || !viaje || !centroCosto || !total) {
     console.error("No se encontraron los elementos del detalle.");
     return;
   }
@@ -22,14 +23,24 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   tabla.innerHTML = `
     <tr>
-      <td colspan="8" class="text-center text-muted">
+      <td colspan="10" class="text-center text-muted">
         <div class="spinner-border spinner-border-sm me-2" role="status"></div>
         Cargando documentos...
       </td>
     </tr>
   `;
 
-  const detalle = await obtenerDatosGoogleSheets(id);
+  let detalle, clasificacion;
+  try {
+    [detalle, clasificacion] = await Promise.all([
+      obtenerDetalleRendicion(id),
+      cargarClasificacionesGasto(id)
+    ]);
+  } catch (error) {
+    mostrarErrorTabla(tabla, "No fue posible consultar PostgreSQL. No se consultó Google Sheets. Revise la conexión o vuelva a iniciar sesión.");
+    console.error("Error cargando detalle:", error);
+    return;
+  }
   console.log("Detalle recibido:", detalle);
 
   if (!detalle || !Array.isArray(detalle.documentos)) {
@@ -39,16 +50,43 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   window.detalleRendicionActual = detalle;
   window.revisionesComprobantes = {};
+  window.tiposGastoDetalle = clasificacion.types;
+  window.clasificacionesGastoDetalle = clasificacion.bySource;
+
+  mostrarEstadoClasificacionGastos(clasificacion);
 
   folio.textContent = detalle.ID || "-";
   colaborador.textContent = detalle.colaborador || "-";
   viaje.textContent = detalle.numero_viaje || "-";
+  centroCosto.textContent = detalle.centro_costo_nombre || detalle.centro_costo || detalle.centro_costo_codigo || "-";
 
   actualizarEstadoRendicion(detalle);
   renderizarAutorizacion(detalle);
   renderizarDocumentos(detalle, tabla);
   actualizarResumenRevision(detalle);
 });
+
+async function obtenerDetalleRendicion(id) {
+  const token = sessionStorage.getItem("rendicionesTokenSeguro") || "";
+  if (!token) return obtenerDatosGoogleSheets(id);
+
+  const detalle = await apiDetalle(`/api/v1/renditions/${encodeURIComponent(id)}/detail`);
+  if (!detalle || !Array.isArray(detalle.documentos)) return detalle;
+  // PostgreSQL numeric llega como texto decimal ("12500.00"), no como
+  // moneda chilena formateada ("12.500"). Convertir en el limite de la API
+  // evita que el parser legado quite el punto y multiplique el monto por 100.
+  return {
+    ...detalle,
+    documentos: detalle.documentos.map(doc => {
+      const texto = String(doc.monto_total ?? '').trim();
+      const monto = Number(texto);
+      if (!/^-?\d+(?:\.\d+)?$/.test(texto) || !Number.isFinite(monto)) {
+        throw new Error('Monto PostgreSQL invalido en el comprobante');
+      }
+      return {...doc, monto_total: monto};
+    })
+  };
+}
 
 
 // ======================================================
@@ -57,6 +95,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 function prepararInterfazRevision(tabla) {
   const encabezado = tabla.closest("table")?.querySelector("thead tr");
+
+  if (encabezado && !encabezado.querySelector("[data-columna-tipo-gasto]")) {
+    const th = document.createElement("th");
+    th.dataset.columnaTipoGasto = "true";
+    th.textContent = "Tipo de gasto";
+    encabezado.appendChild(th);
+  }
 
   if (encabezado && !encabezado.querySelector("[data-columna-revision]")) {
     const th = document.createElement("th");
@@ -135,7 +180,7 @@ function renderizarDocumentos(detalle, tabla) {
   if (!detalle.documentos.length) {
     tabla.innerHTML = `
       <tr>
-        <td colspan="8" class="text-center text-muted">
+        <td colspan="10" class="text-center text-muted">
           La rendición no tiene documentos.
         </td>
       </tr>
@@ -156,6 +201,7 @@ function renderizarDocumentos(detalle, tabla) {
       const motivo = String(doc.revision_motivo || "").trim();
       const urlComprobante =
         doc.fotografia || doc.FOTOGRAFIA || doc.archivo_url || "";
+      const expense = obtenerClasificacionDocumento(doc);
 
       if (idComprobante) {
         window.revisionesComprobantes[idComprobante] = {
@@ -173,6 +219,7 @@ function renderizarDocumentos(detalle, tabla) {
           <td>${escaparHTML(doc.proveedor || "-")}</td>
           <td>${escaparHTML(doc.tipo_documento || "-")}</td>
           <td>${escaparHTML(doc.descripcion || "-")}</td>
+          <td>${escaparHTML(doc.centro_costo_nombre || doc.centro_costo || doc.centro_costo_codigo || detalle.centro_costo_nombre || detalle.centro_costo || detalle.centro_costo_codigo || "-")}</td>
           <td class="text-end">${formatearDinero(monto)}</td>
           <td class="text-center">
             ${urlComprobante
@@ -182,6 +229,7 @@ function renderizarDocumentos(detalle, tabla) {
                  </a>`
               : `<span class="text-muted">Sin respaldo</span>`}
           </td>
+          <td style="min-width: 210px;">${crearControlTipoGasto(expense)}</td>
           <td class="text-center" style="min-width: 230px;">
             ${crearControlRevision(doc, indice, revisionAbierta)}
           </td>
@@ -196,6 +244,89 @@ function renderizarDocumentos(detalle, tabla) {
   if (revisionAbierta) {
     instalarEventosRevision(tabla, detalle);
   }
+  instalarEventosTipoGasto(tabla);
+}
+
+function obtenerClasificacionDocumento(doc) {
+  const source = String(doc.id_comprobante || "").trim();
+  const number = String(doc.numero_documento || "").trim();
+  return window.clasificacionesGastoDetalle?.get(source) ||
+    [...(window.clasificacionesGastoDetalle?.values() || [])].find((item) => String(item.numero_documento || "").trim() === number) || null;
+}
+
+function crearControlTipoGasto(expense) {
+  if (!expense) return '<span class="badge bg-secondary">No migrado</span>';
+  const user = (() => { try { return JSON.parse(localStorage.getItem("usuarioActual") || "null"); } catch { return null; } })();
+  const role = String(user?.rol || "").toUpperCase().replace(/_/g, " ");
+  const editable = ["SUPER ADMIN", "ADMIN", "AUDITOR", "REVISOR"].includes(role);
+  const confidence = Math.round(Number(expense.clasificacion_confianza || 0) * 100);
+  if (!editable) return `<span class="badge" style="background:${escaparAtributo(expense.tipo_gasto_color || "#6c757d")}">${escaparHTML(expense.tipo_gasto_nombre || "Por clasificar")}</span><small class="d-block text-muted">${confidence}%</small>`;
+  const options = (window.tiposGastoDetalle || []).map((type) => `<option value="${escaparAtributo(type.id)}" ${type.id === expense.tipo_gasto_id ? "selected" : ""}>${escaparHTML(type.nombre)}</option>`).join("");
+  return `<select class="form-select form-select-sm tipo-gasto-detalle" data-comprobante-id="${escaparAtributo(expense.comprobante_id)}">${options}</select><small class="d-block text-muted mt-1">${escaparHTML(expense.clasificacion_origen || "-")} · ${confidence}%</small>`;
+}
+
+function instalarEventosTipoGasto(tabla) {
+  tabla.querySelectorAll(".tipo-gasto-detalle").forEach((select) => {
+    select.addEventListener("change", async () => {
+      const previous = select.dataset.previousValue || "";
+      select.disabled = true;
+      try {
+        await apiDetalle(`/api/v1/receipts/${encodeURIComponent(select.dataset.comprobanteId)}/expense-type`, {
+          method: "PATCH", body: { expense_type_id: select.value }
+        });
+        select.dataset.previousValue = select.value;
+        const note = select.nextElementSibling;
+        if (note) note.textContent = "MANUAL · 100%";
+      } catch (_error) {
+        if (previous) select.value = previous;
+        alert("No fue posible actualizar el tipo de gasto. Verifica tus permisos y la conexión local.");
+      } finally { select.disabled = false; }
+    });
+    select.dataset.previousValue = select.value;
+  });
+}
+
+async function cargarClasificacionesGasto(folio) {
+  const token = sessionStorage.getItem("rendicionesTokenSeguro") || "";
+  if (!token) return { types: [], bySource: new Map(), error: "No existe una sesión segura local." };
+  try {
+    const [types, rows] = await Promise.all([
+      apiDetalle("/api/v1/expense-types"),
+      apiDetalle(`/api/v1/renditions/${encodeURIComponent(folio)}/receipt-classifications`)
+    ]);
+    return { types, bySource: new Map(rows.map((item) => [String(item.source_key || "").trim(), item])), error: "" };
+  } catch (_error) {
+    return { types: [], bySource: new Map(), error: "No fue posible obtener las categorías desde la API local." };
+  }
+}
+
+function mostrarEstadoClasificacionGastos(result) {
+  const tableCard = document.getElementById("tablaDocumentos")?.closest(".card");
+  if (!tableCard || document.getElementById("estadoClasificacionGastos")) return;
+  const message = document.createElement("div");
+  message.id = "estadoClasificacionGastos";
+  if (result.error) {
+    message.className = "alert alert-warning m-3 mb-0";
+    message.innerHTML = `<i class="bi bi-exclamation-triangle me-2"></i>${escaparHTML(result.error)} Reinicia la API y vuelve a iniciar sesión.`;
+  } else {
+    message.className = "alert alert-info m-3 mb-0 py-2";
+    message.innerHTML = `<i class="bi bi-tags me-2"></i>Clasificación de gastos conectada: ${result.bySource.size} comprobante(s) encontrado(s).`;
+  }
+  tableCard.querySelector(".card-body")?.prepend(message);
+}
+
+async function apiDetalle(path, options = {}) {
+  const token = sessionStorage.getItem("rendicionesTokenSeguro") || "";
+  const apiBase = new URL(window.location.origin);
+  if (apiBase.port === "5500") apiBase.port = "3000";
+  const response = await fetch(`${apiBase.origin}${path}`, {
+    method: options.method || "GET",
+    headers: { Authorization: `Bearer ${token}`, ...(options.body ? { "Content-Type": "application/json" } : {}) },
+    body: options.body ? JSON.stringify(options.body) : undefined
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || "API_ERROR");
+  return payload.data || [];
 }
 
 
@@ -450,7 +581,7 @@ async function finalizarRevisionComprobantes() {
 
     mostrarMensajeRevision("Guardando la revisión de comprobantes...", "info");
 
-    if (typeof solicitarAppsScript !== "function") {
+    if (!esModoSeguroRendiciones() && typeof solicitarAppsScript !== "function") {
       throw new Error("No se encontró la función de conexión con Apps Script.");
     }
 
@@ -462,7 +593,11 @@ async function finalizarRevisionComprobantes() {
         : ""
     }));
 
-    const resultado = await solicitarAppsScript({
+    const resultado = esModoSeguroRendiciones()
+      ? await apiDetalle(`/api/v1/renditions/${encodeURIComponent(detalle.ID)}/review`, {
+          method: "POST", body: { version: detalle.version, revisiones: payload }
+        })
+      : await solicitarAppsScript({
       accion: "finalizar_revision_comprobantes",
       id: detalle.ID,
       revisiones: JSON.stringify(payload)
@@ -479,7 +614,15 @@ async function finalizarRevisionComprobantes() {
     }, 900);
   } catch (error) {
     console.error("Error finalizando revisión:", error);
-    mostrarMensajeRevision(error.message || "No fue posible finalizar la revisión.", "danger");
+    const mensajes = {
+      REVIEW_CHANGED: "Los datos cambiaron desde que abrió la rendición. Recargue y revise nuevamente antes de guardar.",
+      REVIEW_CLOSED: "Esta rendición ya fue revisada o no permite revisión. Recargue para ver su estado.",
+      INVALID_REVIEW: "Revise las decisiones y los motivos de rechazo (máximo 1000 caracteres).",
+      REVIEW_RECEIPTS_MISMATCH: "La lista de comprobantes no coincide. Recargue la rendición.",
+      INSUFFICIENT_PERMISSIONS: "Su rol no permite aprobar o rechazar rendiciones.",
+      RENDITION_NOT_FOUND: "Rendición no encontrada o fuera de sus empresas permitidas."
+    };
+    mostrarMensajeRevision(mensajes[error.message] || error.message || "No fue posible finalizar la revisión.", "danger");
 
     if (boton) {
       boton.disabled = false;
@@ -579,7 +722,7 @@ function mostrarMensajeAutorizacion(mensaje, tipo = "info") {
 function mostrarErrorTabla(tabla, mensaje) {
   tabla.innerHTML = `
     <tr>
-      <td colspan="8" class="text-center text-danger">
+      <td colspan="10" class="text-center text-danger">
         ${escaparHTML(mensaje)}
       </td>
     </tr>

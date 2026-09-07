@@ -3,6 +3,10 @@
 // ==========================================================
 
 async function generarPDFCompleto() {
+  if (esModoSeguroRendiciones()) {
+    alert("El PDF completo depende de la cartola antigua y está pendiente de migración. Utilice la exportación del informe gerencial PostgreSQL.");
+    return;
+  }
   const detalle = window.detalleRendicionActual;
 
   if (!detalle || !Array.isArray(detalle.documentos)) {
@@ -47,8 +51,7 @@ async function generarPDFCompleto() {
       "TRANSSER";
 
     const centroCosto =
-      detalle.centro_costo ||
-      "-";
+      detalle.centro_costo_nombre || detalle.centro_costo || detalle.centro_costo_codigo || document.getElementById("detalleCentroCosto")?.textContent.trim() || "-";
 
     const viaje =
       detalle.numero_viaje ||
@@ -351,6 +354,13 @@ async function generarPDFCompleto() {
                 ${escaparHTMLPDF(
                   documento.descripcion ||
                   "-"
+                )}
+              </td>
+
+              <td>
+                ${escaparHTMLPDF(
+                  documento.centro_costo_nombre || documento.centro_costo ||
+                  documento.centro_costo_codigo || centroCosto
                 )}
               </td>
 
@@ -1581,6 +1591,10 @@ async function generarPDFCompleto() {
 
                 <th>
                   DESCRIPCIÓN
+                </th>
+
+                <th>
+                  CENTRO DE COSTO
                 </th>
 
                 <th>

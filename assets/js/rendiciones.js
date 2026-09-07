@@ -13,11 +13,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function mostrarMensaje(mensaje, clase = "text-muted") {
-    tabla.innerHTML = `<tr><td colspan="9" class="text-center ${clase}">${escaparHTML(mensaje)}</td></tr>`;
+    tabla.innerHTML = `<tr><td colspan="10" class="text-center ${clase}">${escaparHTML(mensaje)}</td></tr>`;
   }
 
   tabla.innerHTML = `
-    <tr><td colspan="9" class="text-center text-muted">
+    <tr><td colspan="10" class="text-center text-muted">
       <div class="spinner-border spinner-border-sm me-2" role="status"></div>
       Cargando rendiciones...
     </td></tr>`;
@@ -33,15 +33,85 @@ document.addEventListener("DOMContentLoaded", async () => {
   let empresaActiva = "";
   let rendicionesIniciales = null;
 
+  const tokenSeguro = sessionStorage.getItem("rendicionesTokenSeguro") || "";
+
+  async function solicitarApiLocal(ruta) {
+    const apiBase = new URL(window.location.origin);
+    if (apiBase.port === "5500") apiBase.port = "3000";
+    const respuesta = await fetch(`${apiBase.origin}${ruta}`, {
+      cache: "no-store",
+      headers: { Authorization: `Bearer ${tokenSeguro}` }
+    });
+    const datos = await respuesta.json().catch(() => ({}));
+    if (!respuesta.ok) throw new Error(datos.error || `Error API local: ${respuesta.status}`);
+    return datos.data;
+  }
+
+  function convertirRendicionLocal(item) {
+    const estadoOriginal = String(item.estado || "").trim().toUpperCase();
+    const estado = ["PENDIENTE REVISION", "PRESENTADA", "PENDIENTE"].includes(estadoOriginal)
+      ? "PENDIENTE"
+      : estadoOriginal;
+    return {
+      ID: item.folio,
+      procesado_en: item.fecha_presentacion,
+      colaborador: item.colaborador,
+      empresa: item.empresa_codigo,
+      numero_viaje: item.numero_viaje || "-",
+      centro_costo_codigo: item.centro_costo_codigo || "",
+      centro_costo_nombre: item.centro_costo_nombre || "-",
+      monto_total: Number(item.presentado || 0),
+      cantidad_documentos: Number(item.comprobantes || 0),
+      estado_rendicion: estado
+    };
+  }
+
+  function claveTexto(valor) {
+    return String(valor || "").trim().toUpperCase();
+  }
+
+  async function agregarCentrosCostoGoogleSheets(rendiciones) {
+    const colaboradores = await solicitarAppsScriptConCache(
+      { colaboradores: "1" },
+      "colaboradores-centros-rendiciones",
+      30000
+    );
+    if (!Array.isArray(colaboradores)) return rendiciones;
+
+    const porRut = new Map();
+    const porNombre = new Map();
+    colaboradores.forEach((item) => {
+      const centro = item.centro_costo || item.centro_costo_nombre || "";
+      if (item.rut) porRut.set(claveTexto(item.rut).replace(/[^0-9K]/g, ""), centro);
+      if (item.colaborador) porNombre.set(claveTexto(item.colaborador), centro);
+    });
+
+    return rendiciones.map((rendicion) => {
+      const rut = claveTexto(rendicion.rut).replace(/[^0-9K]/g, "");
+      const centro = rendicion.centro_costo_nombre || rendicion.centro_costo ||
+        porRut.get(rut) || porNombre.get(claveTexto(rendicion.colaborador)) || "";
+      return { ...rendicion, centro_costo: centro, centro_costo_nombre: centro };
+    });
+  }
+
   try {
     if (esSuperAdmin && selectorEmpresa && contenedorEmpresa) {
       // Las empresas y el listado son consultas independientes: se solicitan
       // en paralelo para reducir el tiempo de apertura del módulo.
-      const [empresas, listadoInicial] = await Promise.all([
-        solicitarAppsScriptConCache({ empresas: "1" }, "empresas", 30000),
-        solicitarAppsScriptConCache({}, "rendiciones", 15000)
-      ]);
-      rendicionesIniciales = listadoInicial;
+      const [empresas, detalleGerencial] = tokenSeguro
+        ? await Promise.all([
+            solicitarApiLocal("/api/v1/empresas"),
+            solicitarApiLocal("/api/v1/reports/management-detail")
+          ])
+        : await Promise.all([
+            solicitarAppsScriptConCache({ empresas: "1" }, "empresas", 30000),
+            solicitarAppsScriptConCache({}, "rendiciones", 15000)
+          ]);
+      rendicionesIniciales = tokenSeguro
+        ? (Array.isArray(detalleGerencial?.renditions)
+            ? detalleGerencial.renditions.map(convertirRendicionLocal)
+            : [])
+        : detalleGerencial;
 
       if (!Array.isArray(empresas)) throw new Error("No fue posible obtener las empresas.");
       if (!Array.isArray(rendicionesIniciales)) throw new Error("La API no devolvió un listado válido.");
@@ -49,8 +119,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       selectorEmpresa.innerHTML = `
         <option value="">Todas las empresas</option>
         ${empresas.map((empresa) => {
-          const codigo = String(empresa.codigo_empresa || "").trim();
-          const nombre = String(empresa.nombre_empresa || codigo || "Empresa").trim();
+          const codigo = String(empresa.codigo_empresa || empresa.codigo || "").trim();
+          const nombre = String(empresa.nombre_empresa || empresa.nombre || codigo || "Empresa").trim();
           return `<option value="${escaparHTML(codigo)}">${escaparHTML(nombre)}</option>`;
         }).join("")}`;
 
@@ -72,19 +142,30 @@ document.addEventListener("DOMContentLoaded", async () => {
       localStorage.removeItem("empresaSeleccionada");
     }
 
-    const rendiciones = (esSuperAdmin && selectorEmpresa && contenedorEmpresa)
+    if (tokenSeguro && !Array.isArray(rendicionesIniciales)) {
+      const detalleGerencial = await solicitarApiLocal("/api/v1/reports/management-detail");
+      rendicionesIniciales = Array.isArray(detalleGerencial?.renditions)
+        ? detalleGerencial.renditions.map(convertirRendicionLocal)
+        : [];
+    }
+
+    let rendiciones = tokenSeguro
       ? (empresaActiva
-          ? await solicitarAppsScriptConCache(
-              { empresa: empresaActiva },
-              "rendiciones",
-              15000
-            )
+          ? rendicionesIniciales.filter((item) => item.empresa === empresaActiva)
+          : rendicionesIniciales)
+      : (esSuperAdmin && selectorEmpresa && contenedorEmpresa)
+      ? (empresaActiva
+          ? await solicitarAppsScriptConCache({ empresa: empresaActiva }, "rendiciones", 15000)
           : rendicionesIniciales)
       : await solicitarAppsScriptConCache(
           empresaActiva ? { empresa: empresaActiva } : {},
           "rendiciones",
           15000
         );
+    if (!tokenSeguro) {
+      rendiciones = await agregarCentrosCostoGoogleSheets(rendiciones);
+    }
+
     console.log("Rendiciones recibidas:", rendiciones);
     if (!Array.isArray(rendiciones)) throw new Error("La API no devolvió un listado válido.");
 
@@ -152,7 +233,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const id = String(rendicion.ID || "").trim();
         
         // ADICIÓN 1: Crear botón de borrar condicional para Super Admin
-        const botonBorrar = esSuperAdmin 
+        const botonBorrar = esSuperAdmin && !esModoSeguroRendiciones()
           ? `<button type="button" class="btn btn-sm btn-danger btn-borrar-rendicion ms-1" data-id="${escaparHTML(id)}">
                <i class="bi bi-trash"></i> Borrar
              </button>`
@@ -165,6 +246,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             <td>${escaparHTML(rendicion.colaborador || "-")}</td>
             <td>${escaparHTML(rendicion.empresa || "-")}</td>
             <td>${escaparHTML(rendicion.numero_viaje || "-")}</td>
+            <td>${escaparHTML(rendicion.centro_costo_nombre || rendicion.centro_costo || rendicion.centro_costo_codigo || "-")}</td>
             <td>${formatearMonto(rendicion.monto_total)}</td>
             <td>${Number(rendicion.cantidad_documentos) || 0}</td>
             <td>${crearBadgeEstado(rendicion)}</td>
@@ -196,6 +278,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         rendicion.colaborador,
         rendicion.empresa,
         rendicion.numero_viaje,
+        rendicion.centro_costo_nombre,
+        rendicion.centro_costo,
+        rendicion.centro_costo_codigo,
         rendicion.monto_total,
         formatearFecha(rendicion.procesado_en),
         obtenerEstadoRendicion(rendicion)
@@ -217,6 +302,10 @@ function verRendicion(id) {
 // ADICIÓN 3: Nueva función para enviar la orden de borrado a Apps Script
 async function eliminarRendicion(id) {
   if (!id) return;
+  if (esModoSeguroRendiciones()) {
+    alert("La anulación local está pendiente de migración. No se enviará ninguna orden a Google Sheets.");
+    return;
+  }
 
   const confirmar = confirm(`¿Estás seguro de que deseas eliminar la rendición con ID: ${id}? Esta acción no se puede deshacer.`);
   if (!confirmar) return;
