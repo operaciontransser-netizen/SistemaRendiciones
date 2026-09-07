@@ -1,3 +1,7 @@
+function esModoSeguroRendiciones() {
+  return Boolean(sessionStorage.getItem("rendicionesTokenSeguro"));
+}
+
 async function generarPDF() {
   if (esModoSeguroRendiciones()) {
     alert("El PDF de rendición depende de la cartola antigua y está pendiente de migración. Utilice la exportación del informe gerencial PostgreSQL.");

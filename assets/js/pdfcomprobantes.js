@@ -1,3 +1,7 @@
+function esModoSeguroRendiciones() {
+  return Boolean(sessionStorage.getItem("rendicionesTokenSeguro"));
+}
+
 // ==========================================================
 // PDF COMPLETO DE RENDICIÓN + RESPALDOS FOTOGRÁFICOS
 // ==========================================================

@@ -1,3 +1,7 @@
+function esModoSeguroRendiciones() {
+  return Boolean(sessionStorage.getItem("rendicionesTokenSeguro"));
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("rendiciones.js iniciado");
 
